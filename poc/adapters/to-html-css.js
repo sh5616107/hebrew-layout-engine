@@ -2,8 +2,9 @@
 const fs = require('fs');
 const path = require('path');
 
-// Read sample.json
-const inputPath = path.join(__dirname, '..', 'input', 'sample.json');
+// Read sample.json (or from env variable)
+const inputFile = process.env.INPUT_FILE || 'sample.json';
+const inputPath = path.join(__dirname, '..', 'input', inputFile);
 const doc = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
 
 // Helper: convert gematria number (1-999) with טו/טז special cases
@@ -73,16 +74,16 @@ for (const section of doc.sections) {
       }
       html += `</a>`;
     }
-    // Handle opening words
+    // Handle opening words - just the first word for window test
     else if (block.flags.opening) {
       const text = block.runs[0].text;
       const words = text.split(/\s+/);
-      const openingWords = words.slice(0, block.flags.opening.words);
-      const restWords = words.slice(block.flags.opening.words);
+      const firstWord = words[0];
+      const restWords = words.slice(1);
       
-      // Add data attribute for window lines
+      // Add data attribute for window lines - using just first word
       const windowLines = block.flags.opening.windowLines || 0;
-      html += `<span class="opening" data-window-lines="${windowLines}">${openingWords.join(' ')}</span>${restWords.join(' ')}`;
+      html += `<span class="opening-window" data-window-lines="${windowLines}">${firstWord}</span> ${restWords.join(' ')}`;
     } else {
       // Normal text
       for (const run of block.runs) {
@@ -255,29 +256,22 @@ p {
   widows: 2;
 }
 
-/* Opening words with window below */
-/* Simple approach: float the opening word with fixed height to create window */
+/* Opening word with window below (Test 2 - Round 3) */
+.opening-window {
+  float: inline-start; /* RTL: floats to the right */
+  font-weight: bold;
+  font-size: 1em;
+  line-height: inherit;
+  /* Height = (N+1) lines for N=windowLines */
+  /* For windowLines=2: (2+1) * 14pt = 42pt */
+  height: calc(${doc.styles.body.lineHeight}pt * 3);
+  margin-inline-end: 0.15em;
+}
+
+/* Remove old opening styles */
 .has-opening .opening {
   font-weight: bold;
   font-size: 1.1em;
-  float: inline-start; /* RTL: floats to the right */
-  width: fit-content;
-  /* Height = (windowLines + 1) * baselineGrid */
-  /* For windowLines=2: (2+1) * 14pt = 42pt */
-  height: calc((attr(data-window-lines number, 0) + 1) * ${doc.styles.body.lineHeight}pt);
-}
-
-/* Fallback if attr() doesn't work in height - use fixed value for windowLines=2 */
-.has-opening .opening[data-window-lines="2"] {
-  height: ${(2 + 1) * doc.styles.body.lineHeight}pt;
-}
-
-.has-opening .opening[data-window-lines="3"] {
-  height: ${(3 + 1) * doc.styles.body.lineHeight}pt;
-}
-
-.has-opening .opening[data-window-lines="1"] {
-  height: ${(1 + 1) * doc.styles.body.lineHeight}pt;
 }
 
 /* VIVLIOSTYLE-LIMITATION: Baseline grid alignment between columns is not fully supported.

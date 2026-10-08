@@ -2,8 +2,9 @@
 const fs = require('fs');
 const path = require('path');
 
-// Read sample.json
-const inputPath = path.join(__dirname, '..', 'input', 'sample.json');
+// Read sample.json (or from env variable)
+const inputFile = process.env.INPUT_FILE || 'sample.json';
+const inputPath = path.join(__dirname, '..', 'input', inputFile);
 const doc = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
 
 // Generate Typst file
@@ -50,6 +51,7 @@ let typ = `// Typst source for Hebrew Book Layout POC
     top: ${doc.pageSpec.marginTop / 2.835}mm,
     bottom: ${doc.pageSpec.marginBottom / 2.835}mm,
   ),
+  columns: 2,
   header: context {
     set text(size: 9pt, font: "David")
     set align(center)
@@ -65,6 +67,8 @@ let typ = `// Typst source for Hebrew Book Layout POC
   },
   numbering: "1",
 )
+
+#set columns(gutter: ${doc.pageSpec.columnGap / 2.835}mm)
 
 #set text(
   font: "David",
@@ -178,13 +182,8 @@ for (const section of doc.sections) {
   }
 }
 
-// Add two-column layout wrapper
-typ += `\n// Two-column layout\n#columns(2, gutter: ${doc.pageSpec.columnGap / 2.835}mm)[\n\n` + columnContent + `\n]\n`;
-
-// TYPST-LIMITATION: Footnotes in two-column layout appear at bottom of each column,
-// not as full-width footnotes above both columns as specified.
-// See: https://forum.typst.app/t/double-column-footnotes/8231
-typ += `\n// Note: Footnotes appear at bottom of each column, not full-width above columns.\n`;
+// Content with page-level two-column layout (footnotes should be full-width)
+typ += columnContent;
 
 // TYPST-LIMITATION: Columns are not balanced by default. The last page may have uneven columns.
 typ += `// Note: Typst does not balance columns by default. Last page may have uneven column heights.\n`;

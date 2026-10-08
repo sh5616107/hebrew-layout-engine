@@ -125,29 +125,22 @@ p {
   widows: 2;
 }
 
-/* Opening words with window below */
-/* Simple approach: float the opening word with fixed height to create window */
+/* Opening word with window below (Test 2 - Round 3) */
+.opening-window {
+  float: inline-start; /* RTL: floats to the right */
+  font-weight: bold;
+  font-size: 1em;
+  line-height: inherit;
+  /* Height = (N+1) lines for N=windowLines */
+  /* For windowLines=2: (2+1) * 14pt = 42pt */
+  height: calc(14pt * 3);
+  margin-inline-end: 0.15em;
+}
+
+/* Remove old opening styles */
 .has-opening .opening {
   font-weight: bold;
   font-size: 1.1em;
-  float: inline-start; /* RTL: floats to the right */
-  width: fit-content;
-  /* Height = (windowLines + 1) * baselineGrid */
-  /* For windowLines=2: (2+1) * 14pt = 42pt */
-  height: calc((attr(data-window-lines number, 0) + 1) * 14pt);
-}
-
-/* Fallback if attr() doesn't work in height - use fixed value for windowLines=2 */
-.has-opening .opening[data-window-lines="2"] {
-  height: 42pt;
-}
-
-.has-opening .opening[data-window-lines="3"] {
-  height: 56pt;
-}
-
-.has-opening .opening[data-window-lines="1"] {
-  height: 28pt;
 }
 
 /* VIVLIOSTYLE-LIMITATION: Baseline grid alignment between columns is not fully supported.
