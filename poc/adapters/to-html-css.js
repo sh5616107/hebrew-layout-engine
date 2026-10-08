@@ -109,7 +109,7 @@ for (const section of doc.sections) {
       // Inline the footnote content with float: footnote
       if (note) {
         html += `<span id="${note.id}" class="footnote">`;
-        html += `<span class="footnote-marker">${noteIndex + 1}</span> `;
+        // Don't add manual marker - float: footnote provides it automatically
         for (const noteBlock of note.blocks) {
           for (const run of noteBlock.runs) {
             html += run.text;
@@ -217,11 +217,6 @@ section {
   margin-bottom: 4pt;
 }
 
-.footnote-marker {
-  font-weight: bold;
-  margin-left: 2pt;
-}
-
 /* Headings */
 h1 {
   font-size: ${doc.styles.heading1.size}pt;
@@ -256,16 +251,23 @@ p {
   widows: 2;
 }
 
-/* Opening word with window below (Test 2 - Round 3) */
+/* Opening word with window below (Round 4 Test) */
+/* ATTEMPT: float: inline-start with height = (N+1) lines to create window effect.
+   For RTL text, inline-start is the RIGHT side.
+   Using shape-outside: inset(0) to encourage tight wrapping.
+   Expected: First word floats right, next N lines wrap around it leaving space below.
+*/
 .opening-window {
   float: inline-start; /* RTL: floats to the right */
   font-weight: bold;
-  font-size: 1em;
+  font-size: 1.1em;
   line-height: inherit;
-  /* Height = (N+1) lines for N=windowLines */
-  /* For windowLines=2: (2+1) * 14pt = 42pt */
-  height: calc(${doc.styles.body.lineHeight}pt * 3);
-  margin-inline-end: 0.15em;
+  /* Height = (N+1) lines where N = data-window-lines attribute */
+  /* For N=1: (1+1) * line-height = 2 lines */
+  /* For N=2: (2+1) * line-height = 3 lines */
+  height: calc(${doc.styles.body.lineHeight}pt * 2); /* Default for N=1 */
+  margin-inline-end: 0.3em; /* Space between floated word and text */
+  shape-outside: inset(0);
 }
 
 /* Remove old opening styles */
@@ -300,13 +302,19 @@ section:last-of-type {
 .toc-entry .toc-link {
   text-decoration: none;
   color: inherit;
-  display: block;
+  display: flex;
+  justify-content: space-between;
+  direction: rtl;
+}
+
+.toc-entry .toc-link::before {
+  content: leader(dotted) " ";
+  flex: 1;
+  margin: 0 0.5em;
 }
 
 .toc-entry .toc-link::after {
   content: target-counter(attr(href url), page, hebrew);
-  float: inline-start; /* RTL: floats left (start of line) */
-  margin-left: 1em;
 }
 `;
 

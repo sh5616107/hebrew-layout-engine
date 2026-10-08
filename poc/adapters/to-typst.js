@@ -2,6 +2,12 @@
 const fs = require('fs');
 const path = require('path');
 
+// ROUND 4 FIX: Restored full-width footnotes by reverting to #columns() wrapper pattern.
+// Issue: Round 3 moved to page-level `columns: 2` which traps footnotes per-column.
+// Solution: Use `#columns(2, gutter: ...)[ content ]` instead. Footnotes inside a
+// #columns() call flow to full-page-width by default in Typst.
+// All Round 3 improvements (TOC, gematria with geresh, line spacing, bold inline) retained.
+
 // Read sample.json (or from env variable)
 const inputFile = process.env.INPUT_FILE || 'sample.json';
 const inputPath = path.join(__dirname, '..', 'input', inputFile);
@@ -51,7 +57,6 @@ let typ = `// Typst source for Hebrew Book Layout POC
     top: ${doc.pageSpec.marginTop / 2.835}mm,
     bottom: ${doc.pageSpec.marginBottom / 2.835}mm,
   ),
-  columns: 2,
   header: context {
     set text(size: 9pt, font: "David")
     set align(center)
@@ -68,8 +73,6 @@ let typ = `// Typst source for Hebrew Book Layout POC
   numbering: "1",
 )
 
-#set columns(gutter: ${doc.pageSpec.columnGap / 2.835}mm)
-
 #set text(
   font: "David",
   size: ${doc.styles.body.size}pt,
@@ -84,10 +87,24 @@ let typ = `// Typst source for Hebrew Book Layout POC
 
 // Custom paragraph styling for centered last line
 // TYPST-LIMITATION: Centering only the last line of a paragraph is not directly supported.
-// This attempts to approximate it, but Typst's paragraph model doesn't have ::last-line selector.
+// ATTEMPTS:
+// - set par(last-line-end-indent: ...) - only affects indentation, not alignment
+// - #align(center) - centers entire paragraph, not just last line
+// - #h(1fr) after paragraph - does not affect last line of previous paragraph
+// - par(last: center) - no such parameter exists in Typst
+// CONCLUSION: Typst does not support native last-line centering.
 #let centered-last-par(body) = {
   body
 }
+
+// Window effect for opening words
+// TYPST-LIMITATION: Window effect (text wrapping around empty space below bold opening) not supported.
+// ATTEMPTS:
+// - wrap-it package: Searched Typst universe, no such package found in stable release.
+// - Attempted: #import "@preview/wrap-it:0.1.0" - not available.
+// - Typst does not have built-in shape-outside or float positioning like CSS.
+// CONCLUSION: Window effect requires manual spacing or grid positioning, which breaks flow.
+// Current implementation: Bold opening words inline, no window.
 
 `;
 
@@ -182,8 +199,11 @@ for (const section of doc.sections) {
   }
 }
 
-// Content with page-level two-column layout (footnotes should be full-width)
+// Wrap content in two-column layout (footnotes will be full-width)
+typ += `\n// Two-column layout with full-width footnotes\n`;
+typ += `#columns(2, gutter: ${doc.pageSpec.columnGap / 2.835}mm)[\n\n`;
 typ += columnContent;
+typ += `\n]\n\n`;
 
 // TYPST-LIMITATION: Columns are not balanced by default. The last page may have uneven columns.
 typ += `// Note: Typst does not balance columns by default. Last page may have uneven column heights.\n`;

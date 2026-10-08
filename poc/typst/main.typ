@@ -41,7 +41,6 @@
     top: 19.99647266313933mm,
     bottom: 19.99647266313933mm,
   ),
-  columns: 2,
   header: context {
     set text(size: 9pt, font: "David")
     set align(center)
@@ -58,8 +57,6 @@
   numbering: "1",
 )
 
-#set columns(gutter: 10mm)
-
 #set text(
   font: "David",
   size: 11pt,
@@ -74,10 +71,28 @@
 
 // Custom paragraph styling for centered last line
 // TYPST-LIMITATION: Centering only the last line of a paragraph is not directly supported.
-// This attempts to approximate it, but Typst's paragraph model doesn't have ::last-line selector.
+// ATTEMPTS:
+// - set par(last-line-end-indent: ...) - only affects indentation, not alignment
+// - #align(center) - centers entire paragraph, not just last line
+// - #h(1fr) after paragraph - does not affect last line of previous paragraph
+// - par(last: center) - no such parameter exists in Typst
+// CONCLUSION: Typst does not support native last-line centering.
 #let centered-last-par(body) = {
   body
 }
+
+// Window effect for opening words
+// TYPST-LIMITATION: Window effect (text wrapping around empty space below bold opening) not supported.
+// ATTEMPTS:
+// - wrap-it package: Searched Typst universe, no such package found in stable release.
+// - Attempted: #import "@preview/wrap-it:0.1.0" - not available.
+// - Typst does not have built-in shape-outside or float positioning like CSS.
+// CONCLUSION: Window effect requires manual spacing or grid positioning, which breaks flow.
+// Current implementation: Bold opening words inline, no window.
+
+
+// Two-column layout with full-width footnotes
+#columns(2, gutter: 10mm)[
 
 #heading(level: 1, numbering: none, outlined: false)[
   תוכן העניינים
@@ -1414,6 +1429,9 @@
 
 #par[
   וַיַּ֤רְא אֱלֹהִים֙ אֶת־כָּל־אֲשֶׁ֣ר עָשָׂ֔ה וְהִנֵּה־ט֖וֹב מְאֹ֑ד וַֽיְהִי־עֶ֥רֶב וַֽיְהִי־בֹ֖קֶר י֥וֹם הַשִּׁשִּֽׁי׃
+]
+
+
 ]
 
 // Note: Typst does not balance columns by default. Last page may have uneven column heights.
