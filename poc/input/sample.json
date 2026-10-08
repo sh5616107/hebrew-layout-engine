@@ -1,0 +1,285 @@
+{
+  "meta": {
+    "title": "בְּרֵאשִׁית",
+    "titleLatin": "Bereshit (Genesis)",
+    "author": "דוגמה לבדיקת מנוע עימוד",
+    "language": "he",
+    "direction": "rtl"
+  },
+  "styles": {
+    "body": {
+      "fontFamily": "Ezra SIL",
+      "fontSize": 12,
+      "lineHeight": 18,
+      "textAlign": "justify",
+      "lastLine": "center"
+    },
+    "chapter": {
+      "fontFamily": "Ezra SIL",
+      "fontSize": 24,
+      "lineHeight": 36,
+      "bold": true,
+      "textAlign": "center",
+      "spaceAfter": 18,
+      "keepWithNext": true,
+      "pageBreakBefore": "odd",
+      "toc": 1
+    },
+    "subheading": {
+      "fontFamily": "Ezra SIL",
+      "fontSize": 14,
+      "lineHeight": 18,
+      "bold": true,
+      "textAlign": "right",
+      "spaceBefore": 18,
+      "spaceAfter": 9,
+      "keepWithNext": true,
+      "toc": 2
+    },
+    "footnote": {
+      "fontFamily": "Ezra SIL",
+      "fontSize": 10,
+      "lineHeight": 14,
+      "textAlign": "justify"
+    }
+  },
+  "pageSpec": {
+    "width": 498.9,
+    "height": 708.66,
+    "format": "B5-ISO",
+    "marginInner": 56.7,
+    "marginOuter": 42.5,
+    "marginTop": 56.7,
+    "marginBottom": 56.7,
+    "columns": 2,
+    "columnGap": 28.35,
+    "baselineGrid": 18,
+    "direction": "rtl"
+  },
+  "sections": [
+    {
+      "kind": "body",
+      "numbering": "gematria",
+      "blocks": [
+        {
+          "id": "ch1",
+          "style": "chapter",
+          "runs": [
+            {
+              "text": "בְּרֵאשִׁית"
+            }
+          ],
+          "noteRefs": [],
+          "flags": {}
+        },
+        {
+          "id": "p1",
+          "style": "body",
+          "runs": [
+            {
+              "text": "בְּרֵאשִׁית בָּרָא אֱלֹהִים אֵת הַשָּׁמַיִם וְאֵת הָאָרֶץ",
+              "bold": false
+            }
+          ],
+          "noteRefs": [
+            {
+              "noteId": "fn1",
+              "offset": 17
+            }
+          ],
+          "flags": {
+            "opening": {
+              "words": 3,
+              "bold": true,
+              "windowLines": 2
+            }
+          }
+        },
+        {
+          "id": "p2",
+          "style": "body",
+          "runs": [
+            {
+              "text": "וְהָאָרֶץ הָיְתָה תֹהוּ וָבֹהוּ וְחֹשֶׁךְ עַל־פְּנֵי תְהוֹם וְרוּחַ אֱלֹהִים מְרַחֶפֶת עַל־פְּנֵי הַמָּיִם"
+            }
+          ],
+          "noteRefs": [
+            {
+              "noteId": "fn2",
+              "offset": 25
+            }
+          ],
+          "flags": {}
+        },
+        {
+          "id": "sh1",
+          "style": "subheading",
+          "runs": [
+            {
+              "text": "יום ראשון: אור וחושך"
+            }
+          ],
+          "noteRefs": [],
+          "flags": {}
+        },
+        {
+          "id": "p3",
+          "style": "body",
+          "runs": [
+            {
+              "text": "וַיֹּאמֶר אֱלֹהִים יְהִי אוֹר וַיְהִי־אוֹר"
+            }
+          ],
+          "noteRefs": [],
+          "flags": {}
+        },
+        {
+          "id": "p4",
+          "style": "body",
+          "runs": [
+            {
+              "text": "וַיַּרְא אֱלֹהִים אֶת־הָאוֹר כִּי־טוֹב וַיַּבְדֵּל אֱלֹהִים בֵּין הָאוֹר וּבֵין הַחֹשֶׁךְ"
+            }
+          ],
+          "noteRefs": [],
+          "flags": {}
+        },
+        {
+          "id": "p5",
+          "style": "body",
+          "runs": [
+            {
+              "text": "וַיִּקְרָא אֱלֹהִים לָאוֹר יוֹם וְלַחֹשֶׁךְ קָרָא לָיְלָה וַיְהִי־עֶרֶב וַיְהִי־בֹקֶר יוֹם אֶחָד"
+            }
+          ],
+          "noteRefs": [
+            {
+              "noteId": "fn3",
+              "offset": 45
+            }
+          ],
+          "flags": {}
+        },
+        {
+          "id": "sh2",
+          "style": "subheading",
+          "runs": [
+            {
+              "text": "יום שני: הרקיע"
+            }
+          ],
+          "noteRefs": [],
+          "flags": {}
+        },
+        {
+          "id": "p6",
+          "style": "body",
+          "runs": [
+            {
+              "text": "וַיֹּאמֶר אֱלֹהִים יְהִי רָקִיעַ בְּתוֹךְ הַמָּיִם וִיהִי מַבְדִּיל בֵּין מַיִם לָמָיִם"
+            }
+          ],
+          "noteRefs": [],
+          "flags": {}
+        },
+        {
+          "id": "p7",
+          "style": "body",
+          "runs": [
+            {
+              "text": "וַיַּעַשׂ אֱלֹהִים אֶת־הָרָקִיעַ וַיַּבְדֵּל בֵּין הַמַּיִם אֲשֶׁר מִתַּחַת לָרָקִיעַ וּבֵין הַמַּיִם אֲשֶׁר מֵעַל לָרָקִיעַ וַיְהִי־כֵן"
+            }
+          ],
+          "noteRefs": [],
+          "flags": {}
+        },
+        {
+          "id": "p8",
+          "style": "body",
+          "runs": [
+            {
+              "text": "וַיִּקְרָא אֱלֹהִים לָרָקִיעַ שָׁמָיִם וַיְהִי־עֶרֶב וַיְהִי־בֹקֶר יוֹם שֵׁנִי"
+            }
+          ],
+          "noteRefs": [],
+          "flags": {}
+        },
+        {
+          "id": "p9",
+          "style": "body",
+          "runs": [
+            {
+              "text": "וַיֹּאמֶר אֱלֹהִים יִקָּווּ הַמַּיִם מִתַּחַת הַשָּׁמַיִם אֶל־מָקוֹם אֶחָד וְתֵרָאֶה הַיַּבָּשָׁה וַיְהִי־כֵן"
+            }
+          ],
+          "noteRefs": [],
+          "flags": {}
+        },
+        {
+          "id": "p10",
+          "style": "body",
+          "runs": [
+            {
+              "text": "וַיִּקְרָא אֱלֹהִים לַיַּבָּשָׁה אֶרֶץ וּלְמִקְוֵה הַמַּיִם קָרָא יַמִּים וַיַּרְא אֱלֹהִים כִּי־טוֹב"
+            }
+          ],
+          "noteRefs": [],
+          "flags": {}
+        }
+      ]
+    }
+  ],
+  "notes": [
+    {
+      "id": "fn1",
+      "kind": "footnote",
+      "blocks": [
+        {
+          "id": "fn1-p1",
+          "style": "footnote",
+          "runs": [
+            {
+              "text": "בראשית - בתחילה ברא. פירוש רש\"י: אין המקרא הזה אומר אלא דורשני, כמו שדרשוהו רבותינו: בשביל התורה שנקראת ראשית דרכו, ובשביל ישראל שנקראו ראשית תבואתו."
+            }
+          ],
+          "noteRefs": [],
+          "flags": {}
+        }
+      ]
+    },
+    {
+      "id": "fn2",
+      "kind": "footnote",
+      "blocks": [
+        {
+          "id": "fn2-p1",
+          "style": "footnote",
+          "runs": [
+            {
+              "text": "תהו ובהו - פירוש: תוהה ובוהה על התוהו שבה. ולשון תרגום: צדיא וריקניא. תֹּהוּ הוא דבר התוהה שהאדם תוהה ומתבוהל על חורבן הארץ. זוהי הערת שוליים ארוכה יותר שנועדה לבדוק את המשכיות ההערה לעמוד הבא. ההערה צריכה להכיל מספיק טקסט כדי שלא תיכנס בעמוד אחד ותמשיך לעמוד השני. לכן מוסיפים כאן עוד טקסט הסבר: רש\"י מבאר שהארץ היתה בלי צורה ובלי תוכן, ורוח אלהים - רוח המלך המשיח, שהיא עתידה לבוא על פני המים ולהחיות את העולם. וכך נמשכת ההערה על פני מספר שורות רבות כדי לבדוק את יכולת המנוע לפצל הערות בין עמודים."
+            }
+          ],
+          "noteRefs": [],
+          "flags": {}
+        }
+      ]
+    },
+    {
+      "id": "fn3",
+      "kind": "footnote",
+      "blocks": [
+        {
+          "id": "fn3-p1",
+          "style": "footnote",
+          "runs": [
+            {
+              "text": "יום אחד - למה לא נאמר יום ראשון? מפני שלא היה עדיין שני או שלישי, והיה הקב\"ה יחיד בעולמו."
+            }
+          ],
+          "noteRefs": [],
+          "flags": {}
+        }
+      ]
+    }
+  ]
+}

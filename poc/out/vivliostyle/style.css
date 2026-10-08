@@ -1,0 +1,222 @@
+/* Vivliostyle Hebrew Layout - Generated from sample.json */
+
+/* Font face - using locally installed font */
+body {
+  font-family: "Ezra SIL", "Taamey David CLM", "David Libre", "Times New Roman", serif;
+  font-size: 12pt;
+  line-height: 18pt;
+  direction: rtl;
+  unicode-bidi: embed;
+}
+
+/* Page setup */
+@page {
+  size: 498.9pt 708.66pt;
+  margin-top: 56.7pt;
+  margin-bottom: 56.7pt;
+  
+  @footnote {
+    border-top: 1pt solid black;
+    padding-top: 6pt;
+    margin-top: 12pt;
+  }
+}
+
+@page :left {
+  margin-left: 42.5pt;
+  margin-right: 56.7pt;
+  
+  @top-left {
+    content: string(chapter-title);
+    font-size: 10pt;
+    text-align: left;
+  }
+  
+  @bottom-left {
+    content: counter(page, hebrew);
+    font-size: 10pt;
+  }
+}
+
+@page :right {
+  margin-left: 56.7pt;
+  margin-right: 42.5pt;
+  
+  @top-right {
+    content: "בְּרֵאשִׁית";
+    font-size: 10pt;
+    text-align: right;
+  }
+  
+  @bottom-right {
+    content: counter(page, hebrew);
+    font-size: 10pt;
+  }
+}
+
+/* Gematria page numbers */
+/* Note: CSS counter(page, hebrew) uses built-in Hebrew numbering */
+/* For custom gematria with tet-vav/tet-zayin, JavaScript or custom counter needed */
+/* VIVLIOSTYLE-LIMITATION: Custom gematria (טו/טז) requires JavaScript counter-style */
+
+/* Two-column layout */
+.section-body {
+  column-count: 2;
+  column-gap: 28.35pt;
+  column-fill: auto;
+  text-align: justify;
+}
+
+/* RTL column order - right column first */
+/* VIVLIOSTYLE-LIMITATION: RTL column ordering may need manual verification */
+
+/* Table of Contents */
+.toc {
+  page-break-after: always;
+  column-count: 1;
+}
+
+.toc-title {
+  font-size: 18pt;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 18pt;
+}
+
+.toc-entry {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6pt;
+  text-align: right;
+}
+
+.toc-level-1 {
+  font-weight: bold;
+  margin-right: 0;
+}
+
+.toc-level-2 {
+  margin-right: 18pt;
+}
+
+.toc-leader {
+  flex-grow: 1;
+  border-bottom: 1pt dotted #999;
+  margin: 0 6pt;
+  align-self: flex-end;
+  margin-bottom: 3pt;
+}
+
+.toc-page {
+  text-align: left;
+}
+
+/* Use target-counter for page numbers */
+.toc-page a::after {
+  content: target-counter(attr(href url), page, hebrew);
+}
+
+/* Chapter heading */
+.chapter {
+  font-size: 24pt;
+  line-height: 36pt;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 18pt;
+  page-break-before: right;
+  column-span: all;
+  string-set: chapter-title content();
+}
+
+/* Subheading */
+.subheading {
+  font-size: 14pt;
+  line-height: 18pt;
+  font-weight: bold;
+  text-align: right;
+  margin-top: 18pt;
+  margin-bottom: 9pt;
+  page-break-after: avoid;
+  column-span: all;
+}
+
+/* Body paragraphs */
+.body {
+  text-align: justify;
+  text-align-last: center;
+  margin: 0;
+  padding: 0;
+  text-indent: 0;
+}
+
+/* Opening words with bold and window */
+.opening-words {
+  font-weight: bold;
+  float: right;
+}
+
+/* Window effect - empty space below opening */
+/* VIVLIOSTYLE-LIMITATION: Shape-outside for exact word-width window is complex */
+/* This creates a window using shape-outside, but width may not match exactly */
+.has-opening {
+  position: relative;
+}
+
+.has-opening::before {
+  content: "";
+  float: right;
+  /* Window dimensions - approximation */
+  width: 80pt; /* Approximate width - should measure actual opening word width */
+  height: calc(2 * 18pt); /* windowLines * lineHeight */
+  shape-outside: inset(0);
+  clear: right;
+}
+
+/* VIVLIOSTYLE-LIMITATION: Exact window width matching bold word requires JavaScript measurement */
+
+/* Footnotes */
+.footnote {
+  float: footnote;
+  font-size: 10pt;
+  line-height: 14pt;
+  text-align: justify;
+  margin-top: 4pt;
+}
+
+.footnote-ref {
+  font-size: 0.8em;
+  vertical-align: super;
+  text-decoration: none;
+  padding: 0 2pt;
+}
+
+/* Footnote area styling */
+@page {
+  @footnote {
+    border-top: 1pt solid #000;
+    padding-top: 8pt;
+    margin-top: 12pt;
+    /* Full width across both columns */
+    column-span: all;
+  }
+}
+
+/* Baseline grid attempt */
+/* VIVLIOSTYLE-LIMITATION: Shared baseline grid between columns is a known limitation */
+/* See: https://github.com/vivliostyle/vivliostyle.js/issues/1157 */
+/* This sets line-height but doesn't guarantee alignment across columns */
+
+/* Widows and orphans */
+p {
+  orphans: 2;
+  widows: 2;
+}
+
+h1, h2, h3 {
+  page-break-after: avoid;
+}
+
+/* Print refinements */
+a {
+  color: inherit;
+}
