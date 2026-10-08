@@ -1,0 +1,153 @@
+/* Vivliostyle CSS for Hebrew Book Layout */
+
+/* Page setup: B5 (176mm × 250mm) */
+@page {
+  size: 176mm 250mm;
+  margin-top: 19.99647266313933mm;
+  margin-bottom: 19.99647266313933mm;
+  
+  @footnote {
+    border-top: 1pt solid black;
+    padding-top: 6pt;
+    margin-top: 12pt;
+  }
+}
+
+@page :left {
+  margin-left: 14.998236331569666mm;
+  margin-right: 19.99647266313933mm;
+  
+  @top-left {
+    content: "בראשית | " counter(page, hebrew);
+    font-family: "David", serif;
+    font-size: 9pt;
+    direction: rtl;
+  }
+}
+
+@page :right {
+  margin-left: 19.99647266313933mm;
+  margin-right: 14.998236331569666mm;
+  
+  @top-right {
+    content: counter(page, hebrew) " | בראשית";
+    font-family: "David", serif;
+    font-size: 9pt;
+    direction: rtl;
+  }
+}
+
+/* Hebrew counter style with gematria */
+@counter-style hebrew {
+  system: additive;
+  range: 1 999;
+  additive-symbols: 
+    900 תת, 800 תת, 700 תש, 600 תר, 500 ת,
+    400 ת, 300 ש, 200 ר, 100 ק,
+    90 צ, 80 פ, 70 ע, 60 ס, 50 נ,
+    40 מ, 30 ל, 20 כ,
+    19 יט, 18 יח, 17 יז, 16 טז, 15 טו,
+    10 י, 9 ט, 8 ח, 7 ז, 6 ו,
+    5 ה, 4 ד, 3 ג, 2 ב, 1 א;
+  suffix: " ";
+}
+
+/* Body setup */
+body {
+  font-family: "David", serif;
+  font-size: 11pt;
+  line-height: 14pt;
+  direction: rtl;
+  unicode-bidi: embed;
+  text-align: justify;
+  hyphens: none;
+}
+
+/* Two-column layout */
+section {
+  columns: 2;
+  column-gap: 10mm;
+  column-fill: balance;
+  direction: rtl;
+}
+
+/* Footnotes */
+.footnote-ref {
+  font-size: 0.75em;
+  vertical-align: super;
+  text-decoration: none;
+}
+
+.footnote {
+  float: footnote;
+  font-size: 9pt;
+  line-height: 11pt;
+  text-align: justify;
+  margin-bottom: 4pt;
+}
+
+.footnote-marker {
+  font-weight: bold;
+  margin-left: 2pt;
+}
+
+/* Headings */
+h1 {
+  font-size: 18pt;
+  line-height: 28pt;
+  text-align: center;
+  font-weight: bold;
+  break-before: page;
+  page-break-after: avoid;
+  margin-top: 0;
+  margin-bottom: 28pt;
+  column-span: all;
+}
+
+h2 {
+  font-size: 14pt;
+  line-height: 28pt;
+  text-align: center;
+  font-weight: bold;
+  page-break-after: avoid;
+  break-after: avoid;
+  margin-top: 28pt;
+  margin-bottom: 14pt;
+}
+
+/* Paragraphs */
+p {
+  margin: 0;
+  margin-bottom: 7pt;
+  text-align: justify;
+  text-align-last: center;
+  orphans: 2;
+  widows: 2;
+}
+
+/* Opening words with window below */
+/* VIVLIOSTYLE-LIMITATION: Complex shape-outside for RTL text with exact word width
+   is challenging. Using bold emphasis only. Full window implementation would require
+   JavaScript measurement or manual width specification. */
+.has-opening .opening {
+  font-weight: bold;
+  font-size: 1.1em;
+}
+
+/* VIVLIOSTYLE-LIMITATION: Baseline grid alignment between columns is not fully supported.
+   See https://github.com/vivliostyle/vivliostyle.js/issues/1157
+   Line-height is set but cross-column alignment is not guaranteed. */
+
+/* Bold and italic */
+.bold {
+  font-weight: bold;
+}
+
+.italic {
+  font-style: italic;
+}
+
+/* Last section balancing */
+section:last-of-type {
+  column-fill: balance;
+}

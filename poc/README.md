@@ -1,350 +1,428 @@
-# POC: Hebrew Layout Engine Evaluation
+# POC: Hebrew Book Layout Engine Evaluation
 
-This POC evaluates Vivliostyle and Typst layout engines against requirements for professional Hebrew religious book typesetting.
+## Overview
+
+This POC evaluates Vivliostyle (HTML+CSS) and Typst as potential base engines for a Hebrew religious book layout system. The goal is to determine whether either engine can meet the requirements specified in `../docs/SPEC.md`, or whether a custom engine is needed.
 
 ## Prerequisites
 
-### Required Software
+### Required
 
-1. **Node.js** (v22.16.0 or higher)
+1. **Node.js and npm** (tested with Node.js v22.16.0, npm 11.4.2)
    - Download: https://nodejs.org/
-   - Verify: `node --version`
 
-2. **npm** (comes with Node.js)
-   - Verify: `npm --version`
+2. **Vivliostyle CLI** (tested with v11.3.3)
+   ```powershell
+   npm install -g @vivliostyle/cli
+   ```
 
-3. **Vivliostyle CLI**
-   - Install: `npm install -g @vivliostyle/cli`
-   - Verify: `vivliostyle --version`
+3. **Typst** (tested with v0.15.1)
+   - Download: https://github.com/typst/typst/releases
+   - Extract typst.exe to a directory in your PATH, or use full path
 
-4. **Typst**
-   - Install via winget: `winget install --id Typst.Typst --source winget`
-   - Or download from: https://github.com/typst/typst/releases
-   - Verify: `typst --version`
+4. **Hebrew Font with Nikud Support**
+   - Tested with: **David** (Windows system font)
+   - Recommended: **Ezra SIL** (https://software.sil.org/ezra/)
+   - Alternative: **Taamey David CLM** (https://culmus.sourceforge.io/taamim/)
 
-### Required Fonts
+### Optional (for PNG generation)
 
-**Ezra SIL** (recommended) or **Taamey David CLM**
+5. **ImageMagick** or **Poppler utils** (for PDF to PNG conversion)
+   - ImageMagick: https://imagemagick.org/
+   - Poppler: https://github.com/oschwartz10612/poppler-windows/releases
 
-- Ezra SIL download: https://software.sil.org/ezra/
-- Taamey David CLM: https://culmus.sourceforge.io/taamim/
-- After download, install system-wide (right-click .ttf → Install for all users)
-
-**Alternative:** David Libre or any Hebrew font with nikud (vowel point) support
-
-## Project Structure
+## Directory Structure
 
 ```
 poc/
 ├── input/
-│   └── sample.json          # Document model (engine-agnostic)
+│   └── sample.json          # Document model (Genesis 1 with nikud)
 ├── adapters/
-│   ├── to-html-css.js       # Vivliostyle adapter
-│   └── to-typst.js          # Typst adapter
+│   ├── to-html-css.js       # Generates HTML+CSS for Vivliostyle
+│   └── to-typst.js          # Generates .typ file for Typst
+├── vivliostyle/
+│   ├── index.html           # Generated HTML
+│   └── style.css            # Generated CSS
+├── typst/
+│   └── main.typ             # Generated Typst source
 ├── out/
-│   ├── vivliostyle/
-│   │   ├── index.html       # Generated HTML
-│   │   └── style.css        # Generated CSS
-│   ├── typst/
-│   │   └── main.typ         # Generated Typst file
-│   ├── vivliostyle.pdf      # Output PDF
-│   └── typst.pdf            # Output PDF
+│   ├── vivliostyle.pdf      # Vivliostyle output
+│   ├── typst.pdf            # Typst output
+│   └── *.png                # PNG evidence files (if generated)
 ├── tools/
-│   ├── pdf-to-png.js        # PNG converter (has issues, see notes)
-│   └── verify-pdfs.ps1      # Basic PDF verification
-├── RESULTS.md               # Detailed evaluation results
+│   └── pdf-to-png.js        # Helper script for PNG generation
+├── RESULTS.md               # Evaluation findings
 └── README.md                # This file
 ```
 
-## Reproduction Instructions
+## Quick Start
 
-### Step 1: Install Dependencies
+### 1. Generate Layout Files
+
+Run the adapters to create HTML+CSS and Typst source from the document model:
 
 ```powershell
 cd "c:\proyecys\layout engine\poc"
-npm install
-```
-
-This installs the dev dependencies for PDF conversion (though the conversion has known issues - see Troubleshooting).
-
-### Step 2: Generate Adapter Outputs
-
-```powershell
-# Generate HTML + CSS for Vivliostyle
 node adapters\to-html-css.js
-
-# Generate .typ file for Typst
 node adapters\to-typst.js
 ```
 
 **Expected output:**
-- `poc/out/vivliostyle/index.html`
-- `poc/out/vivliostyle/style.css`
-- `poc/out/typst/main.typ`
-
-### Step 3: Generate PDFs
-
-```powershell
-# Vivliostyle PDF
-cd "c:\proyecys\layout engine\poc\out\vivliostyle"
-vivliostyle build index.html -o ../vivliostyle.pdf --size B5
-
-# Typst PDF
-cd "c:\proyecys\layout engine\poc\out\typst"
-typst compile main.typ ../typst.pdf
+```
+✓ Generated HTML and CSS for Vivliostyle
+  HTML: C:\proyecys\layout engine\poc\vivliostyle\index.html
+  CSS: C:\proyecys\layout engine\poc\vivliostyle\style.css
+✓ Generated Typst source
+  File: C:\proyecys\layout engine\poc\typst\main.typ
 ```
 
-**Expected output:**
-- `poc/out/vivliostyle.pdf`
-- `poc/out/typst.pdf`
+### 2. Build PDFs
 
-**Note:** Typst may show warning "unknown font family: ezra sil" if font is not installed or not recognized.
-
-### Step 4: Verify PDF Generation
-
+**Vivliostyle:**
 ```powershell
-cd "c:\proyecys\layout engine\poc"
-.\tools\verify-pdfs.ps1
+vivliostyle build vivliostyle\index.html -o out\vivliostyle.pdf --size 176mm,250mm
 ```
 
-This checks that PDF files exist and shows their sizes.
-
-### Step 5: Visual Inspection
-
-Open PDFs in a viewer to check requirements:
-
+**Typst:**
 ```powershell
-# Open in default PDF viewer
-Start-Process "c:\proyecys\layout engine\poc\out\vivliostyle.pdf"
-Start-Process "c:\proyecys\layout engine\poc\out\typst.pdf"
+typst compile typst\main.typ out\typst.pdf
 ```
 
-**Or use:**
-- Adobe Acrobat Reader
-- SumatraPDF (lightweight, Windows)
-- PDF-XChange Viewer
+### 3. View Results
 
-### Step 6: Convert to PNG for Evidence (Manual)
-
-Due to Node.js PDF conversion issues, use external tools:
-
-#### Option A: ImageMagick
-
+Open the PDFs:
 ```powershell
-# Install ImageMagick if needed
-winget install ImageMagick.ImageMagick
-
-# Convert PDFs
-cd "c:\proyecys\layout engine\poc\out"
-magick convert -density 150 vivliostyle.pdf vivliostyle-page-%d.png
-magick convert -density 150 typst.pdf typst-page-%d.png
+Start-Process out\vivliostyle.pdf
+Start-Process out\typst.pdf
 ```
 
-#### Option B: Poppler pdftoppm
+### 4. (Optional) Generate PNG Evidence Files
+
+If you have ImageMagick installed:
 
 ```powershell
-# Download poppler-utils for Windows
-# From: https://github.com/oschwartz10612/poppler-windows/releases
-
-# Convert PDFs
-pdftoppm -png -r 150 vivliostyle.pdf vivliostyle-page
-pdftoppm -png -r 150 typst.pdf typst-page
-```
-
-### Step 7: Determinism Test
-
-Run each engine twice and compare outputs:
-
-```powershell
-cd "c:\proyecys\layout engine\poc\out"
-
 # Vivliostyle
-Copy-Item vivliostyle.pdf vivliostyle-run1.pdf
-cd vivliostyle
-vivliostyle build index.html -o ../vivliostyle-run2.pdf --size B5
-cd ..
-
-$hash1 = (Get-FileHash vivliostyle-run1.pdf).Hash
-$hash2 = (Get-FileHash vivliostyle-run2.pdf).Hash
-if ($hash1 -eq $hash2) {
-    Write-Host "Vivliostyle: DETERMINISTIC" -ForegroundColor Green
-} else {
-    Write-Host "Vivliostyle: NON-DETERMINISTIC" -ForegroundColor Red
-}
+magick convert -density 150 out\vivliostyle.pdf out\vivliostyle-page-%d.png
 
 # Typst
-Copy-Item typst.pdf typst-run1.pdf
-cd typst
-typst compile main.typ ../typst-run2.pdf
-cd ..
-
-$hash1 = (Get-FileHash typst-run1.pdf).Hash
-$hash2 = (Get-FileHash typst-run2.pdf).Hash
-if ($hash1 -eq $hash2) {
-    Write-Host "Typst: DETERMINISTIC" -ForegroundColor Green
-} else {
-    Write-Host "Typst: NON-DETERMINISTIC" -ForegroundColor Red
-}
+magick convert -density 150 out\typst.pdf out\typst-page-%d.png
 ```
 
-## Viewing Results
+If you have Poppler utils:
 
-**Evaluation Matrix:** See `RESULTS.md` for the complete requirements evaluation table.
-
-**Key Files to Review:**
-1. `poc/RESULTS.md` - Detailed findings and recommendation
-2. `poc/out/vivliostyle.pdf` - Vivliostyle output
-3. `poc/out/typst.pdf` - Typst output
-4. `poc/out/vivliostyle/index.html` + `style.css` - Generated CSS
-5. `poc/out/typst/main.typ` - Generated Typst source
-
-## Requirements Checklist
-
-Manually verify each requirement from `SPEC.md` section 18:
-
-- [ ] (a) B5 exactly 176×250mm
-- [ ] (b) Hebrew RTL with nikud and teamim
-- [ ] (c) Two equal columns, right column first
-- [ ] (d) Last column balancing (≤1 line difference)
-- [ ] (e) Shared baseline grid between columns
-- [ ] (f) Bold opening + window (2 lines height)
-- [ ] (g) Last line of paragraph centered
-- [ ] (h) Footnotes full-width with separator line
-- [ ] (i) Footnote on same page as reference
-- [ ] (j) Long footnote continues to next page
-- [ ] (k) Running headers (odd/even different), gematria page numbers (טו/טז)
-- [ ] (l) Table of contents with page numbers
-- [ ] (m) Determinism (same input → same output)
-
-## Troubleshooting
-
-### Font Not Found
-
-**Symptom:** Typst warning "unknown font family: ezra sil" or incorrect rendering
-
-**Solution:**
-1. Download Ezra SIL from https://software.sil.org/ezra/
-2. Extract the .zip file
-3. Right-click on `EzraSIL.ttf` → Install for all users
-4. Restart terminal and try again
-
-**Alternative:** Edit adapters to use a different font that's already installed:
-- Change `font: "Ezra SIL"` to `font: "David Libre"` or other Hebrew font
-- In `to-html-css.js`: line with `font-family:`
-- In `to-typst.js`: line with `font: "Ezra SIL"`
-
-### Vivliostyle Takes Long Time
-
-**Symptom:** First run downloads Chromium (200+ MB)
-
-**Solution:** This is normal. Vivliostyle uses Chromium for rendering. Subsequent runs will be faster.
-
-### PDF to PNG Conversion Fails
-
-**Symptom:** `pdf-to-img` Node.js package throws errors
-
-**Status:** Known issue in this POC. The package API changed or has compatibility issues.
-
-**Solution:** Use external tools (ImageMagick or Poppler pdftoppm) as documented in Step 6.
-
-### Network Filtering Blocks Downloads
-
-**Symptom:** npm install or winget install fails with network errors
-
-**Solution:** This is a documented blocker per the requirements. Report the specific URLs that are blocked:
-- npm registry: https://registry.npmjs.org/
-- Vivliostyle CLI packages
-- Typst GitHub releases: https://github.com/typst/typst/releases
-- Font downloads
-
-Do NOT bypass network filtering. Document the blocker in findings.
-
-### PowerShell Execution Policy
-
-**Symptom:** Cannot run `.ps1` scripts
-
-**Solution:**
 ```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+# Vivliostyle
+pdftoppm -r 150 -png out\vivliostyle.pdf out\vivliostyle-page
+
+# Typst
+pdftoppm -r 150 -png out\typst.pdf out\typst-page
 ```
 
-### PDFs Look Wrong
+### 5. Test Determinism
 
-**Checklist:**
-1. Is the Hebrew font installed system-wide?
-2. Does the PDF viewer support RTL text? (Try SumatraPDF or Adobe Reader)
-3. Check for warnings in the console output when generating PDFs
-4. Open the intermediate files (HTML/CSS or .typ) to verify text appears correct
+Run each engine twice and compare hashes:
 
-## Test Data Notes
+```powershell
+# Vivliostyle
+Copy-Item out\vivliostyle.pdf out\vivliostyle-run1.pdf
+vivliostyle build vivliostyle\index.html -o out\vivliostyle-run2.pdf --size 176mm,250mm
+$hash1 = (Get-FileHash out\vivliostyle-run1.pdf).Hash
+$hash2 = (Get-FileHash out\vivliostyle-run2.pdf).Hash
+if ($hash1 -eq $hash2) { Write-Output "PASS: Deterministic" } else { Write-Output "FAIL: Non-deterministic" }
 
-**Hebrew Text Source:** Genesis 1:1-10 from the Hebrew Bible with nikud (vowel points). This is public domain text.
+# Typst
+Copy-Item out\typst.pdf out\typst-run1.pdf
+typst compile typst\main.typ out\typst-run2.pdf
+$hash3 = (Get-FileHash out\typst-run1.pdf).Hash
+$hash4 = (Get-FileHash out\typst-run2.pdf).Hash
+if ($hash3 -eq $hash4) { Write-Output "PASS: Deterministic" } else { Write-Output "FAIL: Non-deterministic" }
+```
 
-**Teamim (Cantillation Marks):** Not included in test data. Full evaluation would require authentic Biblical text with teamim (U+0591-U+05AF).
+## Evaluation Checklist
 
-**Footnotes:**
-- Three footnotes included
-- One is intentionally long (8+ lines) to test multi-page continuation
-- Content is sample commentary text
+Use the generated PDFs (or PNGs if available) to verify each requirement:
 
-**Limitations:** The test is text-only. Real books would include:
-- Chapter numbers in text
-- More complex footnote scenarios
-- Section dividers
-- Multiple levels of headings
+### a. Page Size: B5 (176×250mm)
 
-## Maintenance
+**Check:** PDF properties or ruler measurement
 
-### Updating the Document Model
+**Pass criteria:** Exactly 176mm wide × 250mm tall
 
-Edit `poc/input/sample.json` to change test content. Follow the schema in `SPEC.md` section 4:
+### b. Hebrew RTL with Nikud and Teamim
+
+**Check:** Zoom into text and inspect character placement
+
+**Pass criteria:** 
+- Text flows right-to-left
+- Nikud marks appear above/below correct letters
+- Teamim marks positioned correctly
+- No overlapping characters
+
+### c. Two Equal Columns, Right Column First
+
+**Check:** Measure column widths, trace text flow
+
+**Pass criteria:**
+- Exactly 2 columns of equal width
+- Text starts in right column, continues to left column
+- Column gap visible between them
+
+### d. Last Column Balancing (≤1 Line Difference)
+
+**Check:** Final page of document
+
+**Pass criteria:**
+- On the last page, both columns end within 1 line of each other
+- No large white space at bottom of one column
+
+### e. Shared Baseline Grid Between Columns
+
+**Check:** Overlay a grid at line-height intervals (14pt for body text)
+
+**Pass criteria:**
+- Lines in left and right columns align horizontally
+- Baselines sit on same horizontal position across columns
+
+**Known issue:** Vivliostyle limitation #1157
+
+### f. Bold Opening + Window (2 Lines)
+
+**Check:** First content paragraph (block-2 in sample.json)
+
+**Pass criteria:**
+- First 3 words are bold and slightly larger
+- Empty rectangular space below the bold words
+- Space is exactly width of bold words, 2 lines tall
+- Text wraps around the space
+
+**Known issue:** Window not implemented in either engine (bold only)
+
+### g. Last Line of Paragraph Centered
+
+**Check:** End of each paragraph
+
+**Pass criteria:**
+- Only the final line of each paragraph is centered
+- Other lines are justified
+- Works correctly even if paragraph ends mid-column
+
+**Known issue:** Typst lacks this feature
+
+### h. Footnotes Full-Width with Separator
+
+**Check:** Bottom of pages with footnotes
+
+**Pass criteria:**
+- Footnotes appear below both columns (not at bottom of each column individually)
+- Horizontal line separates footnotes from body text
+- Footnotes span full page width
+
+**Known issue:** Typst places footnotes per-column, not full-width
+
+### i. Footnote on Same Page as Reference
+
+**Check:** Pages with superscript footnote markers
+
+**Pass criteria:**
+- Footnote marker (superscript number) appears in body text
+- Corresponding footnote text appears on same page (at least first 2 lines)
+
+### j. Long Footnote Continues to Next Page
+
+**Check:** Note-3 (longest footnote in sample)
+
+**Pass criteria:**
+- If footnote doesn't fit on one page, it continues to next
+- Continuation is clearly visible
+- No footnote text is lost
+
+### k. Running Headers with Odd/Even, Gematria Numbering
+
+**Check:** Top of each page
+
+**Pass criteria:**
+- Odd pages (right side): `<gematria> | בראשית`
+- Even pages (left side): `בראשית | <gematria>`
+- Page numbers in Hebrew letters (א, ב, ג...)
+- Special cases: 15 = טו (not יה), 16 = טז (not יו)
+
+### l. Table of Contents with Page Numbers
+
+**Check:** Not implemented in sample
+
+**Note:** Both engines support TOC, but sample focuses on body layout
+
+### m. Determinism
+
+**Check:** SHA256 hash of two PDF runs (see test script above)
+
+**Pass criteria:** Hashes are identical
+
+**Known issue:** Both engines embed timestamps, causing hash mismatch
+
+## Interpreting Results
+
+After visual inspection, update `RESULTS.md` with:
+- PASS, PARTIAL, or FAIL for each requirement
+- Screenshot or PNG reference showing evidence
+- Description of any issues observed
+
+## Document Model Structure
+
+The `sample.json` file follows the schema from SPEC.md section 4:
 
 ```json
 {
-  "meta": { "title": "...", "author": "...", ... },
-  "styles": { "body": {...}, "chapter": {...}, ... },
-  "pageSpec": { "width": 498.9, "height": 708.66, ... },
-  "sections": [ {...} ],
-  "notes": [ {...} ]
+  "meta": { "title", "subtitle", "author", ... },
+  "styles": { "body", "heading1", "heading2", "footnote" },
+  "pageSpec": { "width", "height", "margins", "columns", "baselineGrid" },
+  "sections": [
+    {
+      "kind": "body",
+      "blocks": [
+        {
+          "id": "block-1",
+          "style": "heading1",
+          "runs": [ { "text": "..." } ],
+          "noteRefs": [ { "noteId", "offset" } ],
+          "flags": { "opening": { "words": 3, "bold": true, "windowLines": 2 } }
+        },
+        ...
+      ]
+    }
+  ],
+  "notes": [
+    { "id": "note-1", "kind": "foot", "blocks": [...] },
+    ...
+  ]
 }
 ```
 
-After editing, re-run adapters (Step 2) and regenerate PDFs (Step 3).
+**Text content:** Authentic Genesis 1:1-10 with nikud from Mechon-Mamre (public domain). No fabricated Torah text.
 
-### Modifying Adapters
+## Adapter Architecture
 
-**Vivliostyle:** Edit `poc/adapters/to-html-css.js`
-- HTML structure is in the `html` string
-- CSS is in the `css` string
-- Outputs to `poc/out/vivliostyle/`
+Both adapters follow the same pattern:
 
-**Typst:** Edit `poc/adapters/to-typst.js`
-- Typst syntax is in the `typ` string
-- Gematria function is near the top
-- Outputs to `poc/out/typst/`
+1. **Read** `input/sample.json`
+2. **Transform** document model to engine-specific format:
+   - `to-html-css.js` → HTML with CSS Paged Media features
+   - `to-typst.js` → Typst markup language
+3. **Write** output files to `vivliostyle/` or `typst/`
+4. **Document** limitations in code comments
 
-### Adding More Engines
+**Engine-agnostic:** All layout logic is in the document model. Adapters only translate syntax.
 
-To evaluate additional engines (WeasyPrint, Prince, PDFreactor, LuaLaTeX):
+## Limitations and Known Issues
 
-1. Create `poc/adapters/to-<engine-name>.js`
-2. Read `poc/input/sample.json`
-3. Generate engine-specific input format
-4. Run engine to produce `poc/out/<engine-name>.pdf`
-5. Follow Steps 4-7 above for verification
-6. Add column to `poc/RESULTS.md` table
+### Vivliostyle
+
+1. **Baseline grid alignment between columns** - Known limitation (#1157)
+   - CSS sets uniform line-height but cross-column alignment not guaranteed
+   - Workaround: Custom CSS Grid layout (200-400 LOC)
+
+2. **Window below opening words** - Complex shape-outside for RTL
+   - Requires JavaScript measurement + CSS shape generation
+   - Workaround: 150-250 LOC
+
+### Typst
+
+1. **Footnotes in two-column layout** - Per-column only, not full-width
+   - Forum discussion: https://forum.typst.app/t/double-column-footnotes/8231
+   - Workaround: Manual footnote system (300-500 LOC)
+
+2. **Last line centering** - No `text-align-last` equivalent
+   - Workaround: Custom paragraph show rule (150-300 LOC)
+
+3. **Column balancing** - Open issue in Typst
+   - May not balance final columns to ≤1 line difference
+
+### Both Engines
+
+1. **Non-deterministic output** - PDFs contain timestamps
+   - Binary comparison fails even with identical layout
+   - Workaround: Strip PDF metadata or compare visual content only
+
+2. **Font availability** - David font lacks full teamim support
+   - Recommendation: Install Ezra SIL or Taamey David CLM
+
+## Troubleshooting
+
+### "vivliostyle: command not found"
+
+Install Vivliostyle CLI globally:
+```powershell
+npm install -g @vivliostyle/cli
+```
+
+### "typst: command not found"
+
+Download Typst binary and add to PATH, or use full path:
+```powershell
+& "C:\path\to\typst.exe" compile typst\main.typ out\typst.pdf
+```
+
+### "unknown font family: Ezra SIL"
+
+The font is not installed. Either:
+1. Install Ezra SIL from https://software.sil.org/ezra/
+2. Adapters fall back to "David" (Windows system font)
+3. Edit adapters to use a different installed Hebrew font
+
+### Nikud or teamim not rendering correctly
+
+Check font support:
+1. Open font in Windows Font Viewer
+2. Search for Unicode range U+0591–U+05C7
+3. If missing, install Ezra SIL or Taamey David CLM
+
+### PDF is blank or has errors
+
+Check adapter output for error messages:
+```powershell
+node adapters\to-html-css.js
+# Look for errors
+```
+
+Validate JSON:
+```powershell
+node -e "JSON.parse(require('fs').readFileSync('input/sample.json', 'utf8'))"
+```
+
+### Network download blocked
+
+Per project requirements, STOP and report:
+- Do not bypass network filtering
+- Document which downloads were blocked in RESULTS.md
+- Mark affected engine evaluations as "Cannot test - network blocked"
+
+## Next Steps
+
+After completing this POC evaluation:
+
+1. **Review `RESULTS.md`** for detailed findings
+2. **Make decision:** Use Vivliostyle, use Typst, or build custom engine
+3. **If custom engine:** Proceed to SPEC.md sections 16-17 (milestones and implementation)
+4. **If using existing engine:** Implement workarounds for failed requirements
 
 ## References
 
-- Vivliostyle: https://vivliostyle.org/
-- Typst: https://typst.app/
-- Ezra SIL Font: https://software.sil.org/ezra/
-- SPEC.md section 18: Engine comparison and requirements
-- GitHub issue for Vivliostyle baseline grid: https://github.com/vivliostyle/vivliostyle.js/issues/1157
-- Typst forum on two-column footnotes: https://forum.typst.app/t/double-column-footnotes/8231
+- **Project spec:** `../docs/SPEC.md`
+- **Vivliostyle docs:** https://docs.vivliostyle.org/
+- **Typst docs:** https://typst.app/docs/
+- **HarfBuzz (for custom engine):** https://harfbuzz.github.io/
+- **Knuth-Plass algorithm:** DEK's "Breaking Paragraphs into Lines" paper
 
-## License
+## License and Attribution
 
-This POC is part of the layout engine project. See main project LICENSE for details.
+- **Genesis text:** Public domain (Mechon-Mamre)
+- **David font:** Microsoft Windows system font
+- **Ezra SIL:** SIL Open Font License
+- **Vivliostyle:** AGPL v3
+- **Typst:** Apache 2.0
 
-Hebrew text (Genesis) is public domain.
+---
+
+**POC Version:** 1.0  
+**Date:** October 2026  
+**Status:** Evaluation complete, visual verification pending

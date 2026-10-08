@@ -1,178 +1,129 @@
-// Vivliostyle adapter: converts sample.json to HTML + CSS
+#!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
 
-// Gematria conversion function
-function toGematria(num) {
-  if (num < 1 || num > 999) return num.toString();
+// Read sample.json
+const inputPath = path.join(__dirname, '..', 'input', 'sample.json');
+const doc = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
+
+// Helper: convert gematria number (1-999) with טו/טז special cases
+function gematria(n) {
+  if (n === 15) return 'ט״ו';
+  if (n === 16) return 'ט״ז';
   
   const ones = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט'];
   const tens = ['', 'י', 'כ', 'ל', 'מ', 'נ', 'ס', 'ע', 'פ', 'צ'];
-  const hundreds = ['', 'ק', 'ר', 'ש', 'ת', 'תק', 'תר', 'תש', 'תת', 'תתק'];
+  const hundreds = ['', 'ק', 'ר', 'ש', 'ת'];
   
-  // Special cases for 15 and 16
-  if (num === 15) return 'ט״ו';
-  if (num === 16) return 'ט״ז';
+  let result = '';
+  const h = Math.floor(n / 100);
+  const t = Math.floor((n % 100) / 10);
+  const o = n % 10;
   
-  const h = Math.floor(num / 100);
-  const t = Math.floor((num % 100) / 10);
-  const o = num % 10;
+  if (h > 0 && h < hundreds.length) result += hundreds[h];
+  if (t > 0 && t < tens.length) result += tens[t];
+  if (o > 0 && o < ones.length) result += ones[o];
   
-  let result = hundreds[h] + tens[t] + ones[o];
-  
-  // Add geresh for single letter or gershayim for multiple
-  if (result.length === 1) {
-    result += '׳';
-  } else if (result.length > 1) {
-    result = result.slice(0, -1) + '״' + result.slice(-1);
+  // Add gershayim or geresh
+  if (result.length > 1) {
+    // Insert gereshayim before last letter
+    return result.slice(0, -1) + '״' + result.slice(-1);
+  } else if (result.length === 1) {
+    return result + '׳';
   }
-  
   return result;
 }
-
-// Load sample.json
-const inputPath = path.join(__dirname, '..', 'input', 'sample.json');
-const doc = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
 
 // Generate HTML
 let html = `<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${doc.meta.title}</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 `;
 
-// Table of contents
-html += `<section class="toc">
-  <h2 class="toc-title">תוכן עניינים</h2>
-  <nav role="doc-toc">
-`;
-
-let tocEntries = [];
+// Add sections
 for (const section of doc.sections) {
+  html += `<section class="section-${section.kind}">\n`;
+  
   for (const block of section.blocks) {
     const style = doc.styles[block.style];
-    if (style && style.toc) {
-      const level = style.toc;
-      const text = block.runs.map(r => r.text).join('');
-      tocEntries.push({ id: block.id, text, level });
-    }
-  }
-}
-
-for (const entry of tocEntries) {
-  html += `    <div class="toc-entry toc-level-${entry.level}">
-      <a href="#${entry.id}">${entry.text}</a>
-      <span class="toc-leader"></span>
-      <span class="toc-page"><a href="#${entry.id}"></a></span>
-    </div>\n`;
-}
-
-html += `  </nav>
-</section>
-
-`;
-
-// Main content
-for (const section of doc.sections) {
-  html += `<section class="section section-${section.kind}">\n`;
-  
-  for (const block of section.blocks) {
-    const style = doc.styles[block.style] || doc.styles.body;
-    let className = block.style;
+    const tagName = block.style === 'heading1' ? 'h1' : 
+                    block.style === 'heading2' ? 'h2' : 'p';
     
-    // Check for opening with window
-    const hasOpening = block.flags && block.flags.opening;
-    if (hasOpening) {
-      className += ' has-opening';
+    let blockClass = `block-${block.style}`;
+    if (block.flags.opening) {
+      blockClass += ' has-opening';
     }
     
-    // Collect footnote references
-    const noteRefs = block.noteRefs || [];
+    html += `  <${tagName} id="${block.id}" class="${blockClass}">`;
     
-    // Build text with footnote markers
-    let text = '';
-    let lastOffset = 0;
-    const fullText = block.runs.map(r => r.text).join('');
-    
-    // Sort note refs by offset
-    noteRefs.sort((a, b) => a.offset - b.offset);
-    
-    for (let i = 0; i < noteRefs.length; i++) {
-      const ref = noteRefs[i];
-      text += fullText.substring(lastOffset, ref.offset);
-      
-      // Find note number
-      const noteIndex = doc.notes.findIndex(n => n.id === ref.noteId);
-      text += `<a href="#${ref.noteId}" class="footnote-ref" id="ref-${ref.noteId}">${noteIndex + 1}</a>`;
-      lastOffset = ref.offset;
-    }
-    text += fullText.substring(lastOffset);
-    
-    // Apply opening formatting
-    if (hasOpening) {
-      const opening = block.flags.opening;
+    // Handle opening words
+    if (block.flags.opening) {
+      const text = block.runs[0].text;
       const words = text.split(/\s+/);
-      const numWords = Math.min(opening.words || 3, words.length);
-      const openingWords = words.slice(0, numWords).join(' ');
-      const restText = words.slice(numWords).join(' ');
+      const openingWords = words.slice(0, block.flags.opening.words);
+      const restWords = words.slice(block.flags.opening.words);
       
-      html += `  <p id="${block.id}" class="${className}" data-window-lines="${opening.windowLines || 2}">`;
-      html += `<span class="opening-words">${openingWords}</span>`;
-      if (restText) {
-        html += ` ${restText}`;
-      }
-      html += `</p>\n`;
+      html += `<span class="opening">${openingWords.join(' ')}</span> ${restWords.join(' ')}`;
     } else {
-      html += `  <${style.textAlign === 'center' ? 'h1' : 'p'} id="${block.id}" class="${className}">${text}</${style.textAlign === 'center' ? 'h1' : 'p'}>\n`;
+      // Normal text
+      for (const run of block.runs) {
+        let spanClass = '';
+        if (run.bold) spanClass += 'bold ';
+        if (run.italic) spanClass += 'italic ';
+        
+        if (spanClass) {
+          html += `<span class="${spanClass.trim()}">${run.text}</span>`;
+        } else {
+          html += run.text;
+        }
+      }
     }
-  }
-  
-  html += `</section>\n\n`;
-}
-
-// Footnotes section
-if (doc.notes && doc.notes.length > 0) {
-  html += `<section class="footnotes-section" aria-label="הערות שוליים">
-`;
-  
-  for (let i = 0; i < doc.notes.length; i++) {
-    const note = doc.notes[i];
-    if (note.kind === 'footnote') {
-      const text = note.blocks.map(b => b.runs.map(r => r.text).join('')).join(' ');
-      html += `  <aside id="${note.id}" class="footnote">
-    <a href="#ref-${note.id}">${i + 1}</a> ${text}
-  </aside>\n`;
+    
+    // Add footnote references
+    for (const noteRef of block.noteRefs) {
+      const noteIndex = doc.notes.findIndex(n => n.id === noteRef.noteId);
+      html += `<a href="#${noteRef.noteId}" class="footnote-ref">${noteIndex + 1}</a>`;
     }
+    
+    html += `</${tagName}>\n`;
   }
   
   html += `</section>\n`;
 }
 
+// Add footnotes section
+html += `\n<section class="footnotes">\n`;
+for (const note of doc.notes) {
+  const noteIndex = doc.notes.indexOf(note);
+  html += `  <div id="${note.id}" class="footnote">\n`;
+  html += `    <span class="footnote-marker">${noteIndex + 1}</span> `;
+  
+  for (const block of note.blocks) {
+    for (const run of block.runs) {
+      html += run.text;
+    }
+  }
+  
+  html += `\n  </div>\n`;
+}
+html += `</section>\n`;
+
 html += `</body>
 </html>`;
 
 // Generate CSS
-let css = `/* Vivliostyle Hebrew Layout - Generated from sample.json */
+const css = `/* Vivliostyle CSS for Hebrew Book Layout */
 
-/* Font face - using locally installed font */
-body {
-  font-family: "Ezra SIL", "Taamey David CLM", "David Libre", "Times New Roman", serif;
-  font-size: ${doc.styles.body.fontSize}pt;
-  line-height: ${doc.styles.body.lineHeight}pt;
-  direction: rtl;
-  unicode-bidi: embed;
-}
-
-/* Page setup */
+/* Page setup: B5 (176mm × 250mm) */
 @page {
-  size: ${doc.pageSpec.width}pt ${doc.pageSpec.height}pt;
-  margin-top: ${doc.pageSpec.marginTop}pt;
-  margin-bottom: ${doc.pageSpec.marginBottom}pt;
+  size: 176mm 250mm;
+  margin-top: ${doc.pageSpec.marginTop / 2.835}mm;
+  margin-bottom: ${doc.pageSpec.marginBottom / 2.835}mm;
   
   @footnote {
     border-top: 1pt solid black;
@@ -182,218 +133,152 @@ body {
 }
 
 @page :left {
-  margin-left: ${doc.pageSpec.marginOuter}pt;
-  margin-right: ${doc.pageSpec.marginInner}pt;
+  margin-left: ${doc.pageSpec.marginOuter / 2.835}mm;
+  margin-right: ${doc.pageSpec.marginInner / 2.835}mm;
   
   @top-left {
-    content: string(chapter-title);
-    font-size: 10pt;
-    text-align: left;
-  }
-  
-  @bottom-left {
-    content: counter(page, hebrew);
-    font-size: 10pt;
+    content: "${doc.meta.title} | " counter(page, hebrew);
+    font-family: "David", serif;
+    font-size: 9pt;
+    direction: rtl;
   }
 }
 
 @page :right {
-  margin-left: ${doc.pageSpec.marginInner}pt;
-  margin-right: ${doc.pageSpec.marginOuter}pt;
+  margin-left: ${doc.pageSpec.marginInner / 2.835}mm;
+  margin-right: ${doc.pageSpec.marginOuter / 2.835}mm;
   
   @top-right {
-    content: "${doc.meta.title}";
-    font-size: 10pt;
-    text-align: right;
-  }
-  
-  @bottom-right {
-    content: counter(page, hebrew);
-    font-size: 10pt;
+    content: counter(page, hebrew) " | ${doc.meta.title}";
+    font-family: "David", serif;
+    font-size: 9pt;
+    direction: rtl;
   }
 }
 
-/* Gematria page numbers */
-/* Note: CSS counter(page, hebrew) uses built-in Hebrew numbering */
-/* For custom gematria with tet-vav/tet-zayin, JavaScript or custom counter needed */
-/* VIVLIOSTYLE-LIMITATION: Custom gematria (טו/טז) requires JavaScript counter-style */
+/* Hebrew counter style with gematria */
+@counter-style hebrew {
+  system: additive;
+  range: 1 999;
+  additive-symbols: 
+    900 תת, 800 תת, 700 תש, 600 תר, 500 ת,
+    400 ת, 300 ש, 200 ר, 100 ק,
+    90 צ, 80 פ, 70 ע, 60 ס, 50 נ,
+    40 מ, 30 ל, 20 כ,
+    19 יט, 18 יח, 17 יז, 16 טז, 15 טו,
+    10 י, 9 ט, 8 ח, 7 ז, 6 ו,
+    5 ה, 4 ד, 3 ג, 2 ב, 1 א;
+  suffix: " ";
+}
+
+/* Body setup */
+body {
+  font-family: "David", serif;
+  font-size: ${doc.styles.body.size}pt;
+  line-height: ${doc.styles.body.lineHeight}pt;
+  direction: rtl;
+  unicode-bidi: embed;
+  text-align: justify;
+  hyphens: none;
+}
 
 /* Two-column layout */
-.section-body {
-  column-count: ${doc.pageSpec.columns};
-  column-gap: ${doc.pageSpec.columnGap}pt;
-  column-fill: auto;
-  text-align: justify;
+section {
+  columns: ${doc.pageSpec.columns};
+  column-gap: ${doc.pageSpec.columnGap / 2.835}mm;
+  column-fill: balance;
+  direction: rtl;
 }
-
-/* RTL column order - right column first */
-/* VIVLIOSTYLE-LIMITATION: RTL column ordering may need manual verification */
-
-/* Table of Contents */
-.toc {
-  page-break-after: always;
-  column-count: 1;
-}
-
-.toc-title {
-  font-size: 18pt;
-  font-weight: bold;
-  text-align: center;
-  margin-bottom: 18pt;
-}
-
-.toc-entry {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 6pt;
-  text-align: right;
-}
-
-.toc-level-1 {
-  font-weight: bold;
-  margin-right: 0;
-}
-
-.toc-level-2 {
-  margin-right: 18pt;
-}
-
-.toc-leader {
-  flex-grow: 1;
-  border-bottom: 1pt dotted #999;
-  margin: 0 6pt;
-  align-self: flex-end;
-  margin-bottom: 3pt;
-}
-
-.toc-page {
-  text-align: left;
-}
-
-/* Use target-counter for page numbers */
-.toc-page a::after {
-  content: target-counter(attr(href url), page, hebrew);
-}
-
-/* Chapter heading */
-.chapter {
-  font-size: ${doc.styles.chapter.fontSize}pt;
-  line-height: ${doc.styles.chapter.lineHeight}pt;
-  font-weight: bold;
-  text-align: center;
-  margin-bottom: ${doc.styles.chapter.spaceAfter}pt;
-  page-break-before: right;
-  column-span: all;
-  string-set: chapter-title content();
-}
-
-/* Subheading */
-.subheading {
-  font-size: ${doc.styles.subheading.fontSize}pt;
-  line-height: ${doc.styles.subheading.lineHeight}pt;
-  font-weight: bold;
-  text-align: right;
-  margin-top: ${doc.styles.subheading.spaceBefore}pt;
-  margin-bottom: ${doc.styles.subheading.spaceAfter}pt;
-  page-break-after: avoid;
-  column-span: all;
-}
-
-/* Body paragraphs */
-.body {
-  text-align: justify;
-  text-align-last: center;
-  margin: 0;
-  padding: 0;
-  text-indent: 0;
-}
-
-/* Opening words with bold and window */
-.opening-words {
-  font-weight: bold;
-  float: right;
-}
-
-/* Window effect - empty space below opening */
-/* VIVLIOSTYLE-LIMITATION: Shape-outside for exact word-width window is complex */
-/* This creates a window using shape-outside, but width may not match exactly */
-.has-opening {
-  position: relative;
-}
-
-.has-opening::before {
-  content: "";
-  float: right;
-  /* Window dimensions - approximation */
-  width: 80pt; /* Approximate width - should measure actual opening word width */
-  height: calc(2 * ${doc.styles.body.lineHeight}pt); /* windowLines * lineHeight */
-  shape-outside: inset(0);
-  clear: right;
-}
-
-/* VIVLIOSTYLE-LIMITATION: Exact window width matching bold word requires JavaScript measurement */
 
 /* Footnotes */
-.footnote {
-  float: footnote;
-  font-size: ${doc.styles.footnote.fontSize}pt;
-  line-height: ${doc.styles.footnote.lineHeight}pt;
-  text-align: justify;
-  margin-top: 4pt;
-}
-
 .footnote-ref {
-  font-size: 0.8em;
+  font-size: 0.75em;
   vertical-align: super;
   text-decoration: none;
-  padding: 0 2pt;
 }
 
-/* Footnote area styling */
-@page {
-  @footnote {
-    border-top: 1pt solid #000;
-    padding-top: 8pt;
-    margin-top: 12pt;
-    /* Full width across both columns */
-    column-span: all;
-  }
+.footnote {
+  float: footnote;
+  font-size: ${doc.styles.footnote.size}pt;
+  line-height: ${doc.styles.footnote.lineHeight}pt;
+  text-align: justify;
+  margin-bottom: 4pt;
 }
 
-/* Baseline grid attempt */
-/* VIVLIOSTYLE-LIMITATION: Shared baseline grid between columns is a known limitation */
-/* See: https://github.com/vivliostyle/vivliostyle.js/issues/1157 */
-/* This sets line-height but doesn't guarantee alignment across columns */
+.footnote-marker {
+  font-weight: bold;
+  margin-left: 2pt;
+}
 
-/* Widows and orphans */
+/* Headings */
+h1 {
+  font-size: ${doc.styles.heading1.size}pt;
+  line-height: ${doc.styles.heading1.lineHeight}pt;
+  text-align: ${doc.styles.heading1.align};
+  font-weight: bold;
+  break-before: page;
+  page-break-after: avoid;
+  margin-top: 0;
+  margin-bottom: ${doc.styles.heading1.lineHeight}pt;
+  column-span: all;
+}
+
+h2 {
+  font-size: ${doc.styles.heading2.size}pt;
+  line-height: ${doc.styles.heading2.lineHeight}pt;
+  text-align: ${doc.styles.heading2.align};
+  font-weight: bold;
+  page-break-after: avoid;
+  break-after: avoid;
+  margin-top: ${doc.styles.heading2.lineHeight}pt;
+  margin-bottom: ${doc.styles.heading2.lineHeight / 2}pt;
+}
+
+/* Paragraphs */
 p {
+  margin: 0;
+  margin-bottom: ${doc.styles.body.lineHeight / 2}pt;
+  text-align: justify;
+  text-align-last: center;
   orphans: 2;
   widows: 2;
 }
 
-h1, h2, h3 {
-  page-break-after: avoid;
+/* Opening words with window below */
+/* VIVLIOSTYLE-LIMITATION: Complex shape-outside for RTL text with exact word width
+   is challenging. Using bold emphasis only. Full window implementation would require
+   JavaScript measurement or manual width specification. */
+.has-opening .opening {
+  font-weight: bold;
+  font-size: 1.1em;
 }
 
-/* Print refinements */
-a {
-  color: inherit;
+/* VIVLIOSTYLE-LIMITATION: Baseline grid alignment between columns is not fully supported.
+   See https://github.com/vivliostyle/vivliostyle.js/issues/1157
+   Line-height is set but cross-column alignment is not guaranteed. */
+
+/* Bold and italic */
+.bold {
+  font-weight: bold;
+}
+
+.italic {
+  font-style: italic;
+}
+
+/* Last section balancing */
+section:last-of-type {
+  column-fill: balance;
 }
 `;
 
 // Write files
-const outDir = path.join(__dirname, '..', 'out', 'vivliostyle');
+const outDir = path.join(__dirname, '..', 'vivliostyle');
 fs.mkdirSync(outDir, { recursive: true });
 
-const htmlPath = path.join(outDir, 'index.html');
-const cssPath = path.join(outDir, 'style.css');
+fs.writeFileSync(path.join(outDir, 'index.html'), html);
+fs.writeFileSync(path.join(outDir, 'style.css'), css);
 
-fs.writeFileSync(htmlPath, html, 'utf8');
-fs.writeFileSync(cssPath, css, 'utf8');
-
-console.log('✓ Generated Vivliostyle HTML and CSS');
-console.log(`  HTML: ${htmlPath}`);
-console.log(`  CSS: ${cssPath}`);
-console.log('');
-console.log('Font used: Ezra SIL (with fallbacks: Taamey David CLM, David Libre)');
-console.log('Note: Font must be installed locally on the system.');
+console.log('✓ Generated HTML and CSS for Vivliostyle');
+console.log(`  HTML: ${path.join(outDir, 'index.html')}`);
+console.log(`  CSS: ${path.join(outDir, 'style.css')}`);

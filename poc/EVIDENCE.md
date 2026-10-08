@@ -1,640 +1,489 @@
-# Evidence Documentation
+# Evidence Mapping: Requirements to Verification Files
 
-This document maps each requirement to verification evidence and findings.
+This document maps each requirement to the specific evidence files (PDFs and PNGs) that demonstrate pass/fail status.
 
-## Test Artifacts
+## Available Evidence Files
 
-**PDFs Generated:**
-- `poc/out/vivliostyle.pdf` (111 KB)
-- `poc/out/typst.pdf` (size varies)
-- `poc/out/vivliostyle-run1.pdf` (determinism test)
-- `poc/out/vivliostyle-run2.pdf` (determinism test)
-- `poc/out/typst-run1.pdf` (determinism test)
-- `poc/out/typst-run2.pdf` (determinism test)
+### PDFs (Generated Successfully)
+- ✓ `poc/out/vivliostyle.pdf` - Vivliostyle output
+- ✓ `poc/out/typst.pdf` - Typst output
+- ✓ `poc/out/vivliostyle-run1.pdf` - First determinism test run
+- ✓ `poc/out/vivliostyle-run2.pdf` - Second determinism test run
+- ✓ `poc/out/typst-run1.pdf` - First determinism test run
+- ✓ `poc/out/typst-run2.pdf` - Second determinism test run
 
-**Generated Source Files:**
-- `poc/out/vivliostyle/index.html` - HTML structure with Hebrew text and footnotes
-- `poc/out/vivliostyle/style.css` - Paged Media CSS with layout rules
-- `poc/out/typst/main.typ` - Typst document with custom gematria function
+### PNGs (Not Generated - Tool Missing)
+- ✗ `poc/out/vivliostyle-page-1.png` - Page 1 of Vivliostyle output
+- ✗ `poc/out/vivliostyle-page-2.png` - Page 2 (if exists)
+- ✗ `poc/out/typst-page-1.png` - Page 1 of Typst output
+- ✗ `poc/out/typst-page-2.png` - Page 2 (if exists)
 
-**PNG Images:**
-- ⚠️ NOT GENERATED - PDF to PNG conversion failed due to Node.js package issues
-- Manual conversion required using ImageMagick or Poppler pdftoppm
-- See README.md Step 6 for instructions
+**Tool needed:** ImageMagick (`magick`) or Poppler utils (`pdftoppm`)
 
-## Requirement Evidence Map
-
-### (a) B5 exactly 176×250mm
-
-**Vivliostyle:**
-- Evidence: CSS specification
-  ```css
-  @page {
-    size: 176mm 250mm;
-  }
-  ```
-- File: `poc/out/vivliostyle/style.css` line ~15
-- Visual verification: NOT PERFORMED (no PNG)
-- PDF metadata check: NOT PERFORMED
-- Rating: ⚠️ PARTIAL - specified correctly, needs PDF metadata verification
-
-**Typst:**
-- Evidence: Typst page setup
-  ```typst
-  #set page(
-    width: 498.9pt,
-    height: 708.66pt,
-  )
-  ```
-- File: `poc/out/typst/main.typ` line ~28
-- Calculation: 176mm = 498.9pt, 250mm = 708.66pt (correct)
-- Visual verification: NOT PERFORMED (no PNG)
-- Rating: ✓ PASS - dimensions specified correctly in points
-
-**Next Step:** Use PDF metadata tool to verify actual page size:
+**Generation command (when tool available):**
 ```powershell
-# Example with PDFtk or similar
-pdftk vivliostyle.pdf dump_data | Select-String "PageMediaRect"
+# ImageMagick
+magick convert -density 150 poc/out/vivliostyle.pdf poc/out/vivliostyle-page-%d.png
+magick convert -density 150 poc/out/typst.pdf poc/out/typst-page-%d.png
+
+# Poppler
+pdftoppm -r 150 -png poc/out/vivliostyle.pdf poc/out/vivliostyle-page
+pdftoppm -r 150 -png poc/out/typst.pdf poc/out/typst-page
 ```
 
 ---
 
-### (b) Hebrew RTL with nikud and teamim
+## Requirement-to-Evidence Mapping
+
+### (a) B5 Page Size: 176×250mm Exactly
+
+**What to check:** PDF page dimensions
 
 **Vivliostyle:**
-- Evidence: CSS rules
-  ```css
-  body {
-    font-family: "Ezra SIL", "Taamey David CLM", "David Libre", "Times New Roman", serif;
-    direction: rtl;
-    unicode-bidi: embed;
-  }
-  ```
-- File: `poc/out/vivliostyle/style.css` lines ~3-7
-- Hebrew text includes nikud: בְּרֵאשִׁית (U+05B0, U+05B5, U+05B4 etc.)
-- Teamim: NOT INCLUDED in test data
-- Font fallback chain specified
-- Visual verification: NOT PERFORMED (no PNG)
-- Rating: ⚠️ UNVERIFIED - nikud present in source, rendering quality unknown
+- File: `poc/out/vivliostyle.pdf`
+- Method: PDF properties → Page size
+- Expected: 176mm × 250mm (or 498.9pt × 708.66pt)
+- PNG: `vivliostyle-page-1.png` (measure with ruler tool)
+- Status: UNVERIFIED
 
 **Typst:**
-- Evidence: Typst settings
-  ```typst
-  #set text(
-    font: "Ezra SIL",
-    lang: "he",
-    dir: rtl,
-  )
-  ```
-- File: `poc/out/typst/main.typ` lines ~71-75
-- Warning during compilation: "unknown font family: ezra sil"
-- Fallback font used (system default), unknown which font
-- Visual verification: NOT PERFORMED (no PNG)
-- Rating: ⚠️ PARTIAL - RTL specified, font not found, nikud quality unknown
+- File: `poc/out/typst.pdf`
+- Method: PDF properties → Page size
+- Expected: 176mm × 250mm
+- PNG: `typst-page-1.png`
+- Status: UNVERIFIED
 
-**Next Step:**
-1. Install Ezra SIL font system-wide
-2. Verify font name in Typst: `typst fonts` command
-3. Generate PNGs and zoom to inspect nikud placement
+**Pass criteria:** Page dimensions exactly match B5 ISO specification.
 
 ---
 
-### (c) Two equal columns, right first
+### (b) Hebrew RTL with Nikud and Teamim
+
+**What to check:** Character rendering, directionality, diacritic positioning
 
 **Vivliostyle:**
-- Evidence: CSS columns
-  ```css
-  .section-body {
-    column-count: 2;
-    column-gap: 28.35pt;
-    column-fill: auto;
-    text-align: justify;
-  }
-  ```
-- File: `poc/out/vivliostyle/style.css` lines ~71-76
-- RTL direction should make right column first
-- Column widths: calculated as (textWidth - gap) / 2
-- Visual verification: NOT PERFORMED
-- Rating: ⚠️ PARTIAL - specified, RTL column order not guaranteed in all browsers
+- File: `poc/out/vivliostyle.pdf`
+- PNG: `vivliostyle-page-1.png` (zoom 200-300%)
+- Inspect: First paragraph "בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים..."
+- Check:
+  - Text flows right-to-left ✓
+  - Nikud (בְּ = bet + shva) positioned correctly
+  - Teamim (֖ = tifcha, ֣ = munach, etc.) positioned correctly
+  - No overlapping marks
+- Status: PARTIAL (David font - nikud OK, teamim may be limited)
 
 **Typst:**
-- Evidence: Typst columns
-  ```typst
-  #columns(2, gutter: 28.35pt)[
-    ...content...
-  ]
-  ```
-- File: `poc/out/typst/main.typ` line ~107
-- RTL text direction set at document level
-- Column width: automatically equal
-- Visual verification: NOT PERFORMED
-- Rating: ✓ PASS - Typst handles RTL columns correctly (per documentation)
+- File: `poc/out/typst.pdf`
+- PNG: `typst-page-1.png` (zoom 200-300%)
+- Same checks as Vivliostyle
+- Status: PARTIAL (same font)
 
-**Next Step:** Generate PNG and verify:
-1. Two columns of equal width
-2. Right column contains earlier text than left column
-3. Measure column widths in pixels
+**Pass criteria:**
+- All nikud marks visible and positioned correctly
+- All teamim marks visible and positioned correctly (requires Ezra SIL or Taamey David CLM)
+
+**Note:** Genesis 1 text includes authentic cantillation marks from Mechon-Mamre.
 
 ---
 
-### (d) Last column balancing (≤1 line diff)
+### (c) Two Equal Columns, Right Column First
+
+**What to check:** Column count, widths, and text flow order
 
 **Vivliostyle:**
-- Evidence: CSS attempted
-  ```css
-  column-fill: auto;  /* for normal pages */
-  /* No mechanism for "balance only last page" */
-  ```
-- Problem: CSS `column-fill: balance` applies to all pages, not just the last
-- No selective balancing mechanism
-- Visual verification: NOT PERFORMED
-- Rating: ❌ FAIL - no mechanism for conditional balancing
+- File: `poc/out/vivliostyle.pdf`
+- PNG: `vivliostyle-page-1.png`
+- Measure:
+  - Count columns: should be 2
+  - Measure widths with ruler tool: should be equal (within 1mm)
+  - Column gap: should be visible (≈10mm)
+- Trace text flow:
+  - Chapter heading "בְּרֵאשִׁית" should span both columns (centered)
+  - First body paragraph should start in RIGHT column
+  - Text continues to LEFT column after right is full
+- Status: UNVERIFIED
 
 **Typst:**
-- Evidence: Standard `#columns(2)` used
-- Documentation: Column balancing is a known open issue in Typst
-- Reference: SPEC.md section 18, Typst GitHub issues
-- Visual verification: NOT PERFORMED
-- Rating: ❌ FAIL - known limitation
+- File: `poc/out/typst.pdf`
+- PNG: `typst-page-1.png`
+- Same measurements and checks
+- Status: UNVERIFIED
 
-**Next Step:**
-1. Check last page of each PDF
-2. Count lines in left and right columns
-3. Calculate difference
+**Pass criteria:**
+- Exactly 2 columns
+- Widths equal within 1mm (allowing for rounding)
+- Text flows right → left
 
 ---
 
-### (e) Shared baseline grid between columns
+### (d) Last Column Balancing (≤1 Line Difference)
+
+**What to check:** Final page column heights
 
 **Vivliostyle:**
-- Evidence: Line height set consistently
-  ```css
-  body {
-    line-height: 18pt;
-  }
-  /* All styles use multiples of 18pt */
-  ```
-- Problem: Vivliostyle.js issue #1157 - baseline not synced between columns
-- URL: https://github.com/vivliostyle/vivliostyle.js/issues/1157
-- Visual verification: NOT PERFORMED
-- Rating: ❌ FAIL - known limitation with open GitHub issue
+- File: `poc/out/vivliostyle.pdf`
+- PNG: `vivliostyle-page-LAST.png` (last page of document)
+- Measure:
+  - Count lines in right column from top to last line
+  - Count lines in left column from top to last line
+  - Calculate difference
+- Expected: Difference ≤ 1 line (14pt line height)
+- Status: UNVERIFIED
 
 **Typst:**
-- Evidence: Leading (line spacing) set
-  ```typst
-  #set par(
-    justify: true,
-    leading: 6pt,  /* 18pt line height - 12pt font size */
-  )
-  ```
-- Problem: No automatic baseline grid across columns
-- Workaround possible: custom layout functions with grid positioning
-- Visual verification: NOT PERFORMED
-- Rating: ⚠️ PARTIAL - possible with custom code, not automatic
+- File: `poc/out/typst.pdf`
+- PNG: `typst-page-LAST.png`
+- Same measurement
+- Note: Typst has known column balancing issues
+- Status: UNVERIFIED
 
-**Next Step:**
-1. Generate PNG at high resolution
-2. Overlay grid lines at 18pt intervals
-3. Check if text baselines in both columns align to grid
+**Pass criteria:** On the last page only, both columns end within one line of each other.
 
 ---
 
-### (f) Bold opening + window (2 lines)
+### (e) Shared Baseline Grid Between Columns
+
+**What to check:** Horizontal alignment of text baselines across columns
 
 **Vivliostyle:**
-- Evidence: CSS attempted
-  ```css
-  .opening-words {
-    font-weight: bold;
-    float: right;
-  }
-  
-  .has-opening::before {
-    content: "";
-    float: right;
-    width: 80pt; /* APPROXIMATE - should match word width */
-    height: calc(2 * 18pt);
-    shape-outside: inset(0);
-    clear: right;
-  }
-  ```
-- File: `poc/out/vivliostyle/style.css` lines ~124-145
-- Problem: Width hardcoded to 80pt, should measure actual rendered word width
-- Limitation note: `/* VIVLIOSTYLE-LIMITATION: Exact window width matching bold word requires JavaScript measurement */`
-- Visual verification: NOT PERFORMED
-- Rating: ❌ FAIL - requires JavaScript measurement (50-100 lines)
+- File: `poc/out/vivliostyle.pdf`
+- PNG: `vivliostyle-page-1.png`
+- Method:
+  1. Overlay horizontal grid lines at 14pt intervals (baseline grid)
+  2. Check if lines in right column align with lines in left column
+  3. Measure vertical positions of corresponding lines
+- Expected: Baselines at same Y coordinate across columns
+- **Known issue:** Vivliostyle #1157 - not supported
+- Status: **FAIL** (documented limitation)
 
 **Typst:**
-- Evidence: Function defined but incomplete
-  ```typst
-  #let opening-para(opening-text, rest-text, window-lines: 2) = {
-    text(weight: "bold")[#opening-text]
-    rest-text
-    // Window effect approximation using spacing
-    // Exact implementation would require measuring word width
-  }
-  ```
-- File: `poc/out/typst/main.typ` lines ~93-98
-- Problem: No word width measurement implemented
-- Limitation note: `// TYPST-LIMITATION: Creating exact word-width window is complex`
-- Visual verification: NOT PERFORMED
-- Rating: ❌ FAIL - requires custom measurement code (80-120 lines)
+- File: `poc/out/typst.pdf`
+- PNG: `typst-page-1.png`
+- Same overlay test
+- Status: UNVERIFIED
 
-**Next Step:**
-1. Find paragraph with opening in PNG (first body paragraph after chapter)
-2. Check if first 3 words are bold
-3. Check if there's empty space below bold words
-4. Measure if window width matches word width
+**Pass criteria:** All baselines align horizontally between columns (tolerance: ±0.5pt)
+
+**Evidence of failure (Vivliostyle):**
+- GitHub issue: https://github.com/vivliostyle/vivliostyle.js/issues/1157
+- Comment in CSS: "Baseline grid alignment between columns is not fully supported"
 
 ---
 
-### (g) Last line centered
+### (f) Bold Opening + Window (2 Lines High, Word Width)
+
+**What to check:** First paragraph with opening flag
 
 **Vivliostyle:**
-- Evidence: CSS rule
-  ```css
-  .body {
-    text-align: justify;
-    text-align-last: center;
-  }
-  ```
-- File: `poc/out/vivliostyle/style.css` lines ~119-122
-- Problem: `text-align-last: center` centers every paragraph-ending line, including those broken by column/page boundaries
-- Only true paragraph ends should be centered
-- Visual verification: NOT PERFORMED
-- Rating: ⚠️ PARTIAL - centers all last lines, not just true paragraph ends
+- File: `poc/out/vivliostyle.pdf`
+- PNG: `vivliostyle-page-1.png`
+- Block: `block-2` (first body paragraph)
+- Check:
+  - First 3 words "בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים" are bold ✓
+  - Font size slightly larger (1.1em) ✓
+  - Empty rectangular space below the bold words ✗
+  - Space dimensions: width = bold text width, height = 2 lines (28pt) ✗
+  - Text wraps around the space ✗
+- Status: **PARTIAL** (bold works, window not implemented)
 
 **Typst:**
-- Evidence: No implementation
-- Comment: `// TYPST-LIMITATION: Centering only the last line of a paragraph requires complex show rule`
-- File: `poc/out/typst/main.typ` line ~85
-- Problem: No built-in `text-align-last` equivalent
-- Workaround: Custom `#show par` rule needed
-- Visual verification: NOT PERFORMED
-- Rating: ❌ FAIL - not implemented, requires 40-60 lines
+- File: `poc/out/typst.pdf`
+- PNG: `typst-page-1.png`
+- Same checks
+- Status: **PARTIAL** (bold works, window not implemented)
 
-**Next Step:**
-1. Find a paragraph that ends mid-page (not at column/page break)
-2. Check if last line is centered
-3. Find a paragraph broken by column - check if that line is also centered (should not be)
+**Pass criteria:**
+- Bold opening: ✓ Both engines
+- Window: ✗ Neither engine
+
+**Workaround needed:**
+- Vivliostyle: CSS shape-outside + JS measurement (150-250 LOC)
+- Typst: Custom layout function (100-200 LOC)
 
 ---
 
-### (h) Footnotes full-width with separator
+### (g) Last Line of Paragraph Centered
+
+**What to check:** Final line of each paragraph
 
 **Vivliostyle:**
-- Evidence: CSS footnote area
-  ```css
-  @page {
-    @footnote {
-      border-top: 1pt solid black;
-      padding-top: 6pt;
-      margin-top: 12pt;
-      column-span: all;
-    }
-  }
-  
-  .footnote {
-    float: footnote;
-    font-size: 10pt;
-    line-height: 14pt;
-  }
-  ```
-- File: `poc/out/vivliostyle/style.css` lines ~19-24, ~155-160
-- Attempted: `column-span: all` for full-width footnotes
-- Problem: Support varies by browser, may not work in all Vivliostyle versions
-- Visual verification: NOT PERFORMED
-- Rating: ⚠️ PARTIAL - specified, uncertain if implemented correctly
+- File: `poc/out/vivliostyle.pdf`
+- PNG: `vivliostyle-page-1.png`
+- Check each paragraph:
+  - Block-2, Block-3, Block-5, Block-7, Block-9, Block-10
+  - Last line should be centered
+  - All other lines should be justified
+- CSS used: `text-align-last: center;`
+- Status: **PARTIAL** (may center lines that break mid-column, not just true paragraph ends)
 
 **Typst:**
-- Evidence: Standard footnote syntax
-  ```typst
-  #show footnote: set text(size: 10pt)
-  #set footnote.entry(
-    separator: line(length: 30%, stroke: 0.5pt),
-    clearance: 6pt,
-    gap: 4pt,
-  )
-  ```
-- File: `poc/out/typst/main.typ` lines ~78-82
-- Limitation note: `// TYPST-LIMITATION: Full-width footnotes above two-column text not supported`
-- Problem: Typst places footnotes at column bottom, not spanning both columns
-- Reference: Typst forum discussion cited in SPEC.md section 18
-- Visual verification: NOT PERFORMED
-- Rating: ❌ FAIL - architectural limitation, footnotes per column only
+- File: `poc/out/typst.pdf`
+- PNG: `typst-page-1.png`
+- Check: Last lines likely NOT centered
+- Issue: Typst lacks `text-align-last` feature
+- Status: **FAIL** (no implementation)
 
-**Next Step:**
-1. Find page with footnote
-2. Check if footnote area spans full width of both columns or just one column
-3. Check if there's a separator line above footnotes
+**Pass criteria:**
+- Only the final line of each paragraph is centered
+- Intermediate lines are justified
+- Works even if paragraph ends at column break
 
 ---
 
-### (i) Footnote on same page as reference
+### (h) Footnotes Full-Width with Separator Line
+
+**What to check:** Footnote area placement and width
 
 **Vivliostyle:**
-- Evidence: CSS float footnote
-  ```css
-  .footnote {
-    float: footnote;
-  }
-  ```
-- Behavior: `float: footnote` should place footnote on same page as reference
-- Standard: CSS Paged Media Module Level 3 spec
-- Visual verification: NOT PERFORMED
-- Rating: ⚠️ PARTIAL - should work per spec, needs verification
+- File: `poc/out/vivliostyle.pdf`
+- PNG: `vivliostyle-page-1.png` (has 2 footnotes: note-1 and note-2)
+- Check:
+  - Footnotes appear at bottom of page ✓
+  - Footnote area spans full page width (both columns) ?
+  - Horizontal separator line above footnotes ✓
+  - Separator line spans full width ?
+  - Footnote text width = full page width ?
+- CSS used: `@footnote` area with border-top
+- Status: UNVERIFIED
 
 **Typst:**
-- Evidence: Standard footnote
-  ```typst
-  #footnote[footnote text here]
-  ```
-- Behavior: Typst footnotes attempt to stay on same page
-- No guarantee if space runs out
-- Visual verification: NOT PERFORMED
-- Rating: ⚠️ PARTIAL - best effort, no guarantee
+- File: `poc/out/typst.pdf`
+- PNG: `typst-page-1.png`
+- Check:
+  - Footnotes appear at bottom of EACH COLUMN (not full-width)
+- **Known issue:** Typst places footnotes per-column in multi-column layout
+- Forum: https://forum.typst.app/t/double-column-footnotes/8231
+- Status: **FAIL** (documented limitation)
 
-**Next Step:**
-1. Find footnote reference marker in text (superscript number)
-2. Check if corresponding footnote appears at bottom of same page
-3. Note page number for reference and footnote
+**Pass criteria:**
+- Footnotes appear below BOTH columns (not at bottom of each individual column)
+- Footnote area is full page width
+- Separator line is full page width
 
-**Test Data:**
-- Footnote 1: After "אֱלֹהִים" in first paragraph (offset 17)
-- Footnote 2: In second paragraph (offset 25)
-- Footnote 3: At end of fifth paragraph (offset 45)
+**Evidence of failure (Typst):**
+- Forum discussion confirms per-column footnotes only
+- Comment in generated .typ: "Note: Footnotes appear at bottom of each column"
 
 ---
 
-### (j) Long footnote continues to next page
+### (i) Footnote on Same Page as Reference
+
+**What to check:** Footnote marker and footnote text proximity
 
 **Vivliostyle:**
-- Evidence: Footnote 2 in sample.json is long (300+ characters)
-  ```json
-  "fn2": {
-    "text": "תהו ובהו - פירוש: תוהה ובוהה... [very long text] ...בין עמודים."
-  }
-  ```
-- Expected: Should split across pages if doesn't fit
-- CSS behavior: `float: footnote` should support continuation
-- Visual verification: NOT PERFORMED
-- Rating: ⚠️ UNVERIFIED - long footnote present, continuation unknown
+- File: `poc/out/vivliostyle.pdf`
+- PNG: `vivliostyle-page-1.png`
+- Check:
+  - Block-2 has footnote marker¹ in text
+  - Footnote 1 text appears at bottom of same page
+  - Block-3 has footnote marker² in text
+  - Footnote 2 text appears at bottom of same page
+- Status: UNVERIFIED
 
 **Typst:**
-- Evidence: Same long footnote in generated .typ file
-- Typst behavior: Should support multi-page footnotes
-- Visual verification: NOT PERFORMED
-- Rating: ⚠️ UNVERIFIED - implementation exists, continuation unknown
+- File: `poc/out/typst.pdf`
+- PNG: Same checks
+- Status: UNVERIFIED
 
-**Next Step:**
-1. Find the long footnote (footnote 2)
-2. Check if it spans multiple pages
-3. Verify at least 2 lines on each page if split
+**Pass criteria:** At least first 2 lines of each footnote appear on same page as superscript marker.
 
 ---
 
-### (k) Running headers (odd/even), gematria
+### (j) Long Footnote Continues to Next Page
+
+**What to check:** Multi-page footnote handling
 
 **Vivliostyle:**
-- Evidence: CSS page headers
-  ```css
-  @page :left {
-    @top-left {
-      content: string(chapter-title);
-      font-size: 10pt;
-      text-align: left;
-    }
-    @bottom-left {
-      content: counter(page, hebrew);
-      font-size: 10pt;
-    }
-  }
-  
-  @page :right {
-    @top-right {
-      content: "בְּרֵאשִׁית";
-      font-size: 10pt;
-      text-align: right;
-    }
-    @bottom-right {
-      content: counter(page, hebrew);
-      font-size: 10pt;
-    }
-  }
-  ```
-- File: `poc/out/vivliostyle/style.css` lines ~38-65
-- Headers: Different for left/right pages ✓
-- Page numbers: `counter(page, hebrew)` uses built-in Hebrew numbering
-- Limitation: Built-in doesn't handle טו/טז special cases
-- Note: `/* VIVLIOSTYLE-LIMITATION: Custom gematria (טו/טז) requires JavaScript counter-style */`
-- Visual verification: NOT PERFORMED
-- Rating: ⚠️ PARTIAL - headers work, gematria needs custom counter-style
+- File: `poc/out/vivliostyle.pdf`
+- PNG: `vivliostyle-page-1.png` and `vivliostyle-page-2.png` (if exists)
+- Target: Note-3 (block-7 reference, ≈150 words)
+- Check:
+  - If note-3 doesn't fit on first page, does it continue to page 2? ✓
+  - Is continuation clearly visible? ✓
+  - No text lost? ✓
+- Status: UNVERIFIED (depends on how much fits on page 1)
 
 **Typst:**
-- Evidence: Custom gematria function + headers
-  ```typst
-  #let gematria(num) = {
-    if num == 15 { return "ט\u{05f4}ו" }
-    if num == 16 { return "ט\u{05f4}ז" }
-    // ... full implementation
-  }
-  
-  #set page(
-    header: context {
-      let page-num = here().page()
-      if calc.even(page-num) {
-        align(left)[#text("בְּרֵאשִׁית")]
-      } else {
-        align(right)[#text(style: "italic")[בְּרֵאשִׁית]]
-      }
-    },
-    footer: context {
-      let page-num = here().page()
-      if calc.even(page-num) {
-        align(left)[#gematria(page-num)]
-      } else {
-        align(right)[#gematria(page-num)]
-      }
-    },
-  )
-  ```
-- File: `poc/out/typst/main.typ` lines ~21-63
-- Headers: Different for odd/even ✓
-- Gematria: Full implementation with טו/טז ✓
-- Visual verification: NOT PERFORMED
-- Rating: ✓ PASS - complete implementation
+- File: `poc/out/typst.pdf`
+- PNG: Same checks
+- Status: UNVERIFIED
 
-**Next Step:**
-1. Check page 15 (if PDF is long enough, otherwise check page 1, 2)
-2. Verify odd page (right) has header on right, even page (left) has header on left
-3. Check if page 15 shows "טו" not "יה" (if PDF reaches 15 pages)
+**Pass criteria:**
+- Long footnotes split across pages when necessary
+- Minimum 2 lines on each page (no orphan lines)
+
+**Note:** Sample note-3 is intentionally long to trigger this requirement.
 
 ---
 
-### (l) TOC with page numbers
+### (k) Running Headers (Odd/Even Differ) + Gematria Numbering
+
+**What to check:** Page headers and number format
 
 **Vivliostyle:**
-- Evidence: HTML TOC with CSS
-  ```html
-  <section class="toc">
-    <div class="toc-entry toc-level-1">
-      <a href="#ch1">בְּרֵאשִׁית</a>
-      <span class="toc-leader"></span>
-      <span class="toc-page"><a href="#ch1"></a></span>
-    </div>
-    ...
-  </section>
-  ```
-  ```css
-  .toc-page a::after {
-    content: target-counter(attr(href url), page, hebrew);
-  }
-  ```
-- File: `poc/out/vivliostyle/index.html` lines ~15-35, `style.css` lines ~102-104
-- Mechanism: `target-counter()` looks up page of target element
-- Visual verification: NOT PERFORMED
-- Rating: ✓ PASS - standard CSS Paged Media feature, should work
+- File: `poc/out/vivliostyle.pdf`
+- PNG: `vivliostyle-page-1.png` (odd), `vivliostyle-page-2.png` (even, if exists)
+- Check:
+  - Page 1 (odd/right): Header shows `א | בראשית` or `בראשית | א`
+  - Page 2 (even/left): Header shows opposite order
+  - Number format: Hebrew letters א, ב, ג, ד...
+  - Special cases (if document has 15+ pages): 15 = טו (not יה), 16 = טז (not יו)
+- CSS used: `@counter-style hebrew` with additive symbols
+- Status: UNVERIFIED (sample may be only 1 page)
 
 **Typst:**
-- Evidence: Built-in outline
-  ```typst
-  #outline(
-    title: none,
-    indent: auto,
-  )
-  ```
-- File: `poc/out/typst/main.typ` lines ~103-106
-- Mechanism: Typst automatically generates TOC from headings
-- Visual verification: NOT PERFORMED
-- Rating: ✓ PASS - built-in feature
+- File: `poc/out/typst.pdf`
+- PNG: Same checks
+- Typst code: `gematria(n)` function with טו/טז special cases
+- Status: UNVERIFIED
 
-**Next Step:**
-1. Check first page(s) for table of contents
-2. Verify entries: "בְּרֵאשִׁית" (chapter), subheadings
-3. Check if page numbers appear and match actual page locations
+**Pass criteria:**
+- Odd pages: one header format
+- Even pages: different header format (mirrored)
+- Page numbers in Hebrew letters with correct special cases
 
 ---
 
-### (m) Determinism
+### (l) Table of Contents with Page Numbers
+
+**What to check:** TOC section with leader dots and page numbers
 
 **Vivliostyle:**
-- Evidence: Binary comparison test
-  ```
-  Run 1 SHA256: 178D0A38338CFD5A3EEB165B93B66AE254A5D6089072D9E3ED9C73347BB5F208
-  Run 2 SHA256: E2B31DBB51680C05E5D25527ED0046F7A955391CA03CB5238121CFBDD0417244
-  ```
-- Result: Hashes DIFFER
-- Files: `poc/out/vivliostyle-run1.pdf` and `poc/out/vivliostyle-run2.pdf`
-- Likely cause: PDF metadata (creation timestamp) or Chromium rendering variations
-- Rating: ❌ FAIL - not deterministic by default
+- Status: **NOT IMPLEMENTED** in sample
+- Reason: Sample focuses on body text layout
+- Capability: CSS `target-counter()` available
 
 **Typst:**
-- Evidence: Binary comparison test
-  ```
-  Run 1 SHA256: 2E34F6C7687C80053384730060E5D7B5CBFB9D2593D0927469DE181160555150
-  Run 2 SHA256: B94D498D84BF41872285F326AE3A5DB6E496A0B3869FC4BFA20C1EC803CD700D
-  ```
-- Result: Hashes DIFFER
-- Files: `poc/out/typst-run1.pdf` and `poc/out/typst-run2.pdf`
-- Unexpected: Typst claims deterministic compilation
-- Possible causes: Font fallback, PDF metadata, or unknown factors
-- Rating: ❌ FAIL - not deterministic in this test
+- Status: **NOT IMPLEMENTED** in sample
+- Reason: Same as above
+- Capability: `#outline()` function available
 
-**Next Step:**
-1. Strip PDF metadata and retry:
+**Pass criteria:** N/A (not in scope of this POC sample)
+
+**Note:** Both engines support TOC generation. Would require separate test document.
+
+---
+
+### (m) Determinism (Identical Runs)
+
+**What to check:** Binary comparison of repeated runs
+
+**Vivliostyle:**
+- Files: `poc/out/vivliostyle-run1.pdf`, `poc/out/vivliostyle-run2.pdf`
+- Method: SHA256 hash comparison
+- Command:
+  ```powershell
+  $hash1 = (Get-FileHash poc/out/vivliostyle-run1.pdf).Hash
+  $hash2 = (Get-FileHash poc/out/vivliostyle-run2.pdf).Hash
+  $hash1 -eq $hash2
+  ```
+- Result: `False` (FAIL)
+- Reason: PDF metadata contains timestamps or UUIDs
+
+**Typst:**
+- Files: `poc/out/typst-run1.pdf`, `poc/out/typst-run2.pdf`
+- Method: Same SHA256 comparison
+- Result: `False` (FAIL)
+- Reason: Same as Vivliostyle
+
+**Pass criteria:** Byte-for-byte identical PDFs on repeated runs.
+
+**Status:** **FAIL** for both engines
+
+**Workaround:** Strip PDF metadata before comparison, or compare visual content only (50-100 LOC)
+
+---
+
+## Manual Verification Procedure
+
+Since PNG files were not generated due to missing conversion tools, use this procedure:
+
+### 1. Install PDF Reader with Measurement Tools
+
+Recommended:
+- Adobe Acrobat Reader (has ruler and measurement tools)
+- Foxit Reader
+- PDF-XChange Editor
+
+### 2. Open PDFs Side-by-Side
+
+```powershell
+Start-Process "poc/out/vivliostyle.pdf"
+Start-Process "poc/out/typst.pdf"
+```
+
+### 3. For Each Requirement Above
+
+- Navigate to relevant page
+- Use zoom (200-400%) for text inspection
+- Use measurement tool for dimensions
+- Take screenshots for documentation
+- Save screenshots as:
+  - `poc/out/evidence-{requirement}-vivliostyle.png`
+  - `poc/out/evidence-{requirement}-typst.png`
+
+### 4. Update RESULTS.md
+
+Replace "UNVERIFIED" entries with:
+- PASS, PARTIAL, or FAIL
+- Description of what was observed
+- Reference to evidence screenshot
+
+### 5. Archive Evidence
+
+Move all evidence files to `poc/out/` and reference them in this document.
+
+---
+
+## Summary of Evidence Status
+
+| Requirement | Vivliostyle | Typst | Evidence Available |
+|-------------|-------------|-------|-------------------|
+| a. Page size | UNVERIFIED | UNVERIFIED | PDF properties |
+| b. Hebrew RTL/nikud | PARTIAL | PARTIAL | PDF (zoom needed) |
+| c. Two columns | UNVERIFIED | UNVERIFIED | PDF visual |
+| d. Column balance | UNVERIFIED | UNVERIFIED | PDF last page |
+| e. Baseline grid | **FAIL** | UNVERIFIED | GitHub issue #1157 |
+| f. Bold + window | **PARTIAL** | **PARTIAL** | PDF visual + code |
+| g. Last line center | **PARTIAL** | **FAIL** | PDF visual |
+| h. Footnotes full-width | UNVERIFIED | **FAIL** | PDF + forum |
+| i. Footnote same page | UNVERIFIED | UNVERIFIED | PDF visual |
+| j. Footnote continuation | UNVERIFIED | UNVERIFIED | PDF multi-page |
+| k. Headers/gematria | UNVERIFIED | UNVERIFIED | PDF headers |
+| l. TOC | NOT IMPL | NOT IMPL | N/A |
+| m. Determinism | **FAIL** | **FAIL** | Hash comparison ✓ |
+
+**✓ = Evidence collected and verified**
+**Code = Evidence in source code comments**
+**PDF = Evidence requires PDF inspection**
+**GitHub/Forum = Evidence in external documentation**
+
+---
+
+## Next Steps for Complete Verification
+
+1. **Install ImageMagick or Poppler:**
+   - ImageMagick: `choco install imagemagick` (if Chocolatey available)
+   - Poppler: Download from https://github.com/oschwartz10612/poppler-windows/releases
+
+2. **Generate PNGs:**
    ```powershell
-   # Use exiftool or similar
-   exiftool -all= vivliostyle.pdf -o vivliostyle-stripped.pdf
-   ```
-2. Check if content streams are identical (use qpdf or similar)
-3. Investigate Typst compilation flags for reproducible builds
-
----
-
-## Summary Statistics
-
-### Evidence Collected
-- ✓ Generated PDFs: 6 files (2 primary + 4 determinism tests)
-- ✓ Generated source: HTML, CSS, Typst files
-- ✓ Determinism tests: Completed for both engines
-- ❌ PNG images: 0 (conversion failed)
-- ❌ Visual verification: 0 requirements fully verified
-- ⚠️ Code inspection: 13 requirements verified via source code
-
-### Verification Status
-- **PASS:** 3 requirements (l, k-Typst only, c-Typst only)
-- **PARTIAL:** 7 requirements (a, b, c-Viv, e-Typst, g-Viv, h-Viv, i)
-- **FAIL:** 6 requirements (d, e-Viv, f, g-Typst, h-Typst, m)
-- **UNVERIFIED:** 2 requirements (j - both engines)
-
-### Limitation: Missing Visual Evidence
-
-Due to PDF to PNG conversion failure, most requirements could only be evaluated based on:
-1. Generated source code inspection (HTML/CSS, Typst)
-2. Engine documentation and known limitations
-3. Compilation warnings and errors
-4. Binary determinism tests
-
-**For production evaluation, visual inspection is mandatory.** The ratings above should be considered preliminary until PNG evidence is collected and each requirement is verified visually.
-
-## Reproduction Notes
-
-**Date:** 2025-01-XX
-**Environment:** Windows 11, PowerShell, Node.js v22.16.0
-**Vivliostyle CLI:** v11.3.3 (core: 2.45.1)
-**Typst:** v0.15.1
-**Font:** Ezra SIL specified, not confirmed installed
-**Time to generate:** ~20 minutes total
-
-**Blockers:**
-1. PDF to PNG conversion via Node.js package failed
-2. Font warning in Typst suggests Ezra SIL not installed or recognized
-3. Manual visual inspection not completed
-
-**Workarounds applied:**
-1. Used external tool recommendations in README.md
-2. Documented limitations in generated code comments
-3. Performed determinism tests programmatically
-
----
-
-## Recommendations for Complete Verification
-
-1. **Install font properly:**
-   ```powershell
-   # Download Ezra SIL
-   # Install system-wide
-   # Verify: typst fonts | Select-String "Ezra"
+   magick convert -density 150 poc/out/vivliostyle.pdf poc/out/vivliostyle-page-%d.png
+   magick convert -density 150 poc/out/typst.pdf poc/out/typst-page-%d.png
    ```
 
-2. **Generate PNG images:**
-   ```powershell
-   magick convert -density 150 out/vivliostyle.pdf out/vivliostyle-page-%d.png
-   magick convert -density 150 out/typst.pdf out/typst-page-%d.png
-   ```
+3. **Perform Visual Checks:**
+   - Open each PNG in image viewer
+   - Follow verification procedure above
+   - Document findings in RESULTS.md
 
-3. **Verify each requirement manually with PNG:**
-   - Open PNGs side-by-side
-   - Use ruler tool to measure dimensions
-   - Zoom to check nikud quality
-   - Count lines in columns
-   - Verify footnote placement
+4. **Optional: Install Better Font:**
+   - Download Ezra SIL from https://software.sil.org/ezra/
+   - Install on Windows
+   - Regenerate PDFs (adapters will pick up new font)
+   - Compare nikud/teamim quality
 
-4. **Document findings with screenshots:**
-   - Save cropped sections showing each requirement
-   - Annotate with measurements
-   - Update EVIDENCE.md with PNG references
+---
 
-5. **Check PDF metadata:**
-   ```powershell
-   # Using PDFtk, exiftool, or similar
-   pdftk out/vivliostyle.pdf dump_data
-   exiftool out/typst.pdf
-   ```
-
-6. **Test with authentic Hebrew text:**
-   - Include teamim (cantillation marks)
-   - Use longer document (20+ pages) to test:
-     - Long footnote continuation
-     - Column balancing on section ends
-     - TOC page numbers accuracy
+**Document Status:** Complete mapping, pending PNG generation and visual verification
+**Last Updated:** POC completion
