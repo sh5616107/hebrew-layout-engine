@@ -167,3 +167,20 @@ p {
 section:last-of-type {
   column-fill: balance;
 }
+
+/* TOC entries */
+.toc-entry {
+  position: relative;
+}
+
+.toc-entry .toc-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.toc-entry .toc-link::after {
+  content: target-counter(attr(href url), page, hebrew);
+  float: inline-start; /* RTL: floats left (start of line) */
+  margin-left: 1em;
+}

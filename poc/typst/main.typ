@@ -20,12 +20,12 @@
   if o > 0 and o < ones.len() { result = result + ones.at(o) }
   
   // Add gershayim or geresh
-  if result.len() > 1 {
+  if result.clusters().len() > 1 {
     let chars = result.clusters()
     let last-char = chars.last()
     let rest = chars.slice(0, chars.len() - 1).join()
     result = rest + "״" + last-char
-  } else if result.len() == 1 {
+  } else if result.clusters().len() == 1 {
     result = result + "׳"
   }
   
@@ -80,59 +80,21 @@
 // Two-column layout
 #columns(2, gutter: 10mm)[
 
-// Section: front
-#align(center)[
-  #text(size: 18pt, weight: "bold")[
-    תוכן העניינים
-  ]
+#heading(level: 1, numbering: none, outlined: false)[
+  תוכן העניינים
 ]
 
-#par[
-  בראשית
-]
-
-#par[
-      יום ראשון
-]
-
-#par[
-      יום שני
-]
-
-#par[
-      יום שלישי
-]
-
-#par[
-      יום רביעי
-]
-
-#par[
-      יום חמישי
-]
-
-#par[
-      יום שישי
-]
-
-// Section: body
+#outline(title: none, depth: 2, indent: 1em)
 
 #colbreak()
-#align(center)[
-  #text(size: 18pt, weight: "bold")[
-    בְּרֵאשִׁית
-  ]
+
+// Section: body
+#heading(level: 1, numbering: none)[
+  בְּרֵאשִׁית
 ]
 
 #par[
-  #box([
-    #place(top + right, float: true, clearance: 0pt)[
-      #box(width: auto, height: 42pt)[
-        #text(weight: "bold", size: 12.100000000000001pt)[בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים]
-      ]
-    ]
-    בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ׃
-  ])
+  #text(weight: "bold", size: 12.100000000000001pt)[בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים] אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ׃
 #footnote[
     #text(size: 9pt)[
       ראה רש״י: בראשית ברא. לא אמר הכתוב בראשונה ברא, שאם אתה אומר כן, תצטרך להמר: עשה לו שמים למעלה ממנו, והכתוב לא בא ללמד על סדר הבריאה.
@@ -150,10 +112,8 @@
 
 
 #v(28pt)
-#align(center)[
-  #text(size: 14pt, weight: "bold")[
-    יום ראשון
-  ]
+#heading(level: 2, numbering: none)[
+  יום ראשון
 ]
 #v(14pt)
 
@@ -163,10 +123,8 @@
 
 
 #v(28pt)
-#align(center)[
-  #text(size: 14pt, weight: "bold")[
-    יום שני
-  ]
+#heading(level: 2, numbering: none)[
+  יום שני
 ]
 #v(14pt)
 
@@ -180,10 +138,8 @@
 
 
 #v(28pt)
-#align(center)[
-  #text(size: 14pt, weight: "bold")[
-    יום שלישי
-  ]
+#heading(level: 2, numbering: none)[
+  יום שלישי
 ]
 #v(14pt)
 
@@ -197,10 +153,8 @@
 
 
 #v(28pt)
-#align(center)[
-  #text(size: 14pt, weight: "bold")[
-    יום רביעי
-  ]
+#heading(level: 2, numbering: none)[
+  יום רביעי
 ]
 #v(14pt)
 
@@ -218,10 +172,8 @@
 
 
 #v(28pt)
-#align(center)[
-  #text(size: 14pt, weight: "bold")[
-    יום חמישי
-  ]
+#heading(level: 2, numbering: none)[
+  יום חמישי
 ]
 #v(14pt)
 
@@ -239,10 +191,8 @@
 
 
 #v(28pt)
-#align(center)[
-  #text(size: 14pt, weight: "bold")[
-    יום שישי
-  ]
+#heading(level: 2, numbering: none)[
+  יום שישי
 ]
 #v(14pt)
 
@@ -274,3 +224,4 @@
 ]
 
 // Note: Footnotes appear at bottom of each column, not full-width above columns.
+// Note: Typst does not balance columns by default. Last page may have uneven column heights.

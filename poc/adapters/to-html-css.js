@@ -58,11 +58,23 @@ for (const section of doc.sections) {
     if (block.flags.opening) {
       blockClass += ' has-opening';
     }
+    if (block.flags.tocEntry) {
+      blockClass += ' toc-entry';
+    }
     
     html += `  <${tagName} id="${block.id}" class="${blockClass}">`;
     
+    // Handle TOC entry with target link
+    if (block.flags.tocEntry) {
+      const targetId = block.flags.tocEntry.targetBlockId;
+      html += `<a href="#${targetId}" class="toc-link">`;
+      for (const run of block.runs) {
+        html += run.text;
+      }
+      html += `</a>`;
+    }
     // Handle opening words
-    if (block.flags.opening) {
+    else if (block.flags.opening) {
       const text = block.runs[0].text;
       const words = text.split(/\s+/);
       const openingWords = words.slice(0, block.flags.opening.words);
@@ -70,7 +82,7 @@ for (const section of doc.sections) {
       
       // Add data attribute for window lines
       const windowLines = block.flags.opening.windowLines || 0;
-      html += `<span class="opening" data-window-lines="${windowLines}">${openingWords.join(' ')}</span> ${restWords.join(' ')}`;
+      html += `<span class="opening" data-window-lines="${windowLines}">${openingWords.join(' ')}</span>${restWords.join(' ')}`;
     } else {
       // Normal text
       for (const run of block.runs) {
@@ -86,10 +98,24 @@ for (const section of doc.sections) {
       }
     }
     
-    // Add footnote references
+    // Add footnote references with inline footnote content
     for (const noteRef of block.noteRefs) {
       const noteIndex = doc.notes.findIndex(n => n.id === noteRef.noteId);
+      const note = doc.notes.find(n => n.id === noteRef.noteId);
+      
       html += `<a href="#${noteRef.noteId}" class="footnote-ref">${noteIndex + 1}</a>`;
+      
+      // Inline the footnote content with float: footnote
+      if (note) {
+        html += `<span id="${note.id}" class="footnote">`;
+        html += `<span class="footnote-marker">${noteIndex + 1}</span> `;
+        for (const noteBlock of note.blocks) {
+          for (const run of noteBlock.runs) {
+            html += run.text;
+          }
+        }
+        html += `</span>`;
+      }
     }
     
     html += `</${tagName}>\n`;
@@ -97,23 +123,6 @@ for (const section of doc.sections) {
   
   html += `</section>\n`;
 }
-
-// Add footnotes section
-html += `\n<section class="footnotes">\n`;
-for (const note of doc.notes) {
-  const noteIndex = doc.notes.indexOf(note);
-  html += `  <div id="${note.id}" class="footnote">\n`;
-  html += `    <span class="footnote-marker">${noteIndex + 1}</span> `;
-  
-  for (const block of note.blocks) {
-    for (const run of block.runs) {
-      html += run.text;
-    }
-  }
-  
-  html += `\n  </div>\n`;
-}
-html += `</section>\n`;
 
 html += `</body>
 </html>`;
@@ -287,6 +296,23 @@ p {
 /* Last section balancing */
 section:last-of-type {
   column-fill: balance;
+}
+
+/* TOC entries */
+.toc-entry {
+  position: relative;
+}
+
+.toc-entry .toc-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.toc-entry .toc-link::after {
+  content: target-counter(attr(href url), page, hebrew);
+  float: inline-start; /* RTL: floats left (start of line) */
+  margin-left: 1em;
 }
 `;
 

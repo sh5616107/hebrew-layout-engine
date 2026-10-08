@@ -29,12 +29,12 @@ let typ = `// Typst source for Hebrew Book Layout POC
   if o > 0 and o < ones.len() { result = result + ones.at(o) }
   
   // Add gershayim or geresh
-  if result.len() > 1 {
+  if result.clusters().len() > 1 {
     let chars = result.clusters()
     let last-char = chars.last()
     let rest = chars.slice(0, chars.len() - 1).join()
     result = rest + "״" + last-char
-  } else if result.len() == 1 {
+  } else if result.clusters().len() == 1 {
     result = result + "׳"
   }
   
@@ -95,6 +95,23 @@ let columnContent = '';
 let isFirstHeading1 = true;
 
 for (const section of doc.sections) {
+  // Special handling for TOC section
+  if (section.kind === 'front') {
+    // Output TOC title as heading
+    for (const block of section.blocks) {
+      if (block.style === 'heading1') {
+        columnContent += `#heading(level: 1, numbering: none, outlined: false)[\n`;
+        columnContent += `  ${block.runs[0].text}\n`;
+        columnContent += `]\n\n`;
+        break;
+      }
+    }
+    // Use native Typst outline
+    columnContent += `#outline(title: none, depth: 2, indent: 1em)\n\n`;
+    columnContent += `#colbreak()\n\n`;
+    continue;
+  }
+  
   columnContent += `// Section: ${section.kind}\n`;
   
   for (const block of section.blocks) {
@@ -107,17 +124,13 @@ for (const section of doc.sections) {
         columnContent += `\n#colbreak()\n`;
       }
       isFirstHeading1 = false;
-      columnContent += `#align(center)[\n`;
-      columnContent += `  #text(size: ${style.size}pt, weight: "bold")[\n`;
-      columnContent += `    ${block.runs[0].text}\n`;
-      columnContent += `  ]\n`;
+      columnContent += `#heading(level: 1, numbering: none)[\n`;
+      columnContent += `  ${block.runs[0].text}\n`;
       columnContent += `]\n\n`;
     } else if (block.style === 'heading2') {
       columnContent += `\n#v(${style.lineHeight}pt)\n`;
-      columnContent += `#align(center)[\n`;
-      columnContent += `  #text(size: ${style.size}pt, weight: "bold")[\n`;
-      columnContent += `    ${block.runs[0].text}\n`;
-      columnContent += `  ]\n`;
+      columnContent += `#heading(level: 2, numbering: none)[\n`;
+      columnContent += `  ${block.runs[0].text}\n`;
       columnContent += `]\n`;
       columnContent += `#v(${style.lineHeight / 2}pt)\n\n`;
     } else {
@@ -130,23 +143,10 @@ for (const section of doc.sections) {
         const words = text.split(/\s+/);
         const openingWords = words.slice(0, block.flags.opening.words);
         const restWords = words.slice(block.flags.opening.words);
-        const windowLines = block.flags.opening.windowLines || 0;
         
-        // Simple approach: use place() with float to create window effect
-        if (windowLines > 0) {
-          const lineHeight = style.lineHeight;
-          const windowHeight = (windowLines + 1) * lineHeight;
-          columnContent += `  #box([\n`;
-          columnContent += `    #place(top + right, float: true, clearance: 0pt)[\n`;
-          columnContent += `      #box(width: auto, height: ${windowHeight}pt)[\n`;
-          columnContent += `        #text(weight: "bold", size: ${style.size * 1.1}pt)[${openingWords.join(' ')}]\n`;
-          columnContent += `      ]\n`;
-          columnContent += `    ]\n`;
-          columnContent += `    ${openingWords.join(' ')} ${restWords.join(' ')}\n`;
-          columnContent += `  ])\n`;
-        } else {
-          columnContent += `  #text(weight: "bold", size: ${style.size * 1.1}pt)[${openingWords.join(' ')}] ${restWords.join(' ')}`;
-        }
+        // TYPST-LIMITATION: Cannot create window effect (empty space below bold opening).
+        // Emitting bold text inline instead.
+        columnContent += `  #text(weight: "bold", size: ${style.size * 1.1}pt)[${openingWords.join(' ')}] ${restWords.join(' ')}\n`;
       } else {
         // Normal text
         for (const run of block.runs) {
@@ -185,6 +185,9 @@ typ += `\n// Two-column layout\n#columns(2, gutter: ${doc.pageSpec.columnGap / 2
 // not as full-width footnotes above both columns as specified.
 // See: https://forum.typst.app/t/double-column-footnotes/8231
 typ += `\n// Note: Footnotes appear at bottom of each column, not full-width above columns.\n`;
+
+// TYPST-LIMITATION: Columns are not balanced by default. The last page may have uneven columns.
+typ += `// Note: Typst does not balance columns by default. Last page may have uneven column heights.\n`;
 
 // Write file
 const outDir = path.join(__dirname, '..', 'typst');
