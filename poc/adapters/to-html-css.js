@@ -68,7 +68,9 @@ for (const section of doc.sections) {
       const openingWords = words.slice(0, block.flags.opening.words);
       const restWords = words.slice(block.flags.opening.words);
       
-      html += `<span class="opening">${openingWords.join(' ')}</span> ${restWords.join(' ')}`;
+      // Add data attribute for window lines
+      const windowLines = block.flags.opening.windowLines || 0;
+      html += `<span class="opening" data-window-lines="${windowLines}">${openingWords.join(' ')}</span> ${restWords.join(' ')}`;
     } else {
       // Normal text
       for (const run of block.runs) {
@@ -245,12 +247,28 @@ p {
 }
 
 /* Opening words with window below */
-/* VIVLIOSTYLE-LIMITATION: Complex shape-outside for RTL text with exact word width
-   is challenging. Using bold emphasis only. Full window implementation would require
-   JavaScript measurement or manual width specification. */
+/* Simple approach: float the opening word with fixed height to create window */
 .has-opening .opening {
   font-weight: bold;
   font-size: 1.1em;
+  float: inline-start; /* RTL: floats to the right */
+  width: fit-content;
+  /* Height = (windowLines + 1) * baselineGrid */
+  /* For windowLines=2: (2+1) * 14pt = 42pt */
+  height: calc((attr(data-window-lines number, 0) + 1) * ${doc.styles.body.lineHeight}pt);
+}
+
+/* Fallback if attr() doesn't work in height - use fixed value for windowLines=2 */
+.has-opening .opening[data-window-lines="2"] {
+  height: ${(2 + 1) * doc.styles.body.lineHeight}pt;
+}
+
+.has-opening .opening[data-window-lines="3"] {
+  height: ${(3 + 1) * doc.styles.body.lineHeight}pt;
+}
+
+.has-opening .opening[data-window-lines="1"] {
+  height: ${(1 + 1) * doc.styles.body.lineHeight}pt;
 }
 
 /* VIVLIOSTYLE-LIMITATION: Baseline grid alignment between columns is not fully supported.

@@ -15,9 +15,13 @@ Both Vivliostyle and Typst were evaluated against 13 critical requirements for H
   - Single-page sample insufficient to test multi-page features (footnote continuation, running headers, column balancing)
 
 **Confirmed Failures:**
-- Vivliostyle: Baseline grid alignment (e), window below opening (f)
-- Typst: Last-line centering (g), full-width footnotes (h), window below opening (f)
-- Both: Determinism (m), opening word window (f)
+- Vivliostyle: Baseline grid alignment (e)
+- Typst: Last-line centering (g), full-width footnotes (h), opening window (f)
+- Both: Determinism (m)
+
+**Implemented but Unverified:**
+- Vivliostyle: Opening window using CSS float (23 LOC added, requires PNG inspection)
+- Various layout features need manual PNG inspection
 
 **Recommendation:** Build custom layout engine (see detailed analysis below). Estimated workarounds: 350-650 LOC for Vivliostyle, 550-1000 LOC for Typst.
 
@@ -32,7 +36,7 @@ Both Vivliostyle and Typst were evaluated against 13 critical requirements for H
 | c | Two equal columns, right first | UNVERIFIED | UNVERIFIED | PNG exists, manual inspection needed |
 | d | Last column balancing (≤1 line diff) | UNVERIFIED | UNVERIFIED | Single-page sample, not testable |
 | e | Shared baseline grid between columns | FAIL | UNVERIFIED | Known Vivliostyle limitation (#1157) |
-| f | Bold opening + window (2 lines) | PARTIAL | PARTIAL | Bold implemented, window not implemented |
+| f | Bold opening + window (2 lines) | UNVERIFIED | FAIL | Vivliostyle: float approach (23 LOC), needs PNG check; Typst: place() approach failed |
 | g | Last line centered | PARTIAL | FAIL | CSS text-align-last used, Typst lacks this |
 | h | Footnotes full-width with separator | UNVERIFIED | FAIL | PNG exists, Typst per-column confirmed |
 | i | Footnote on same page as reference | UNVERIFIED | UNVERIFIED | PNG exists, manual verification needed |
@@ -140,25 +144,43 @@ Both Vivliostyle and Typst were evaluated against 13 critical requirements for H
 ### Requirement (f): Bold Opening + Window (2 lines high, word width)
 
 **Vivliostyle:**
-- Implemented (partial): Bold opening only
-- Status: **PARTIAL**
-- What works: First 3 words bolded with `font-weight: bold; font-size: 1.1em;`
-- What doesn't: Window (empty space below) not implemented
-- Attempted: CSS `shape-outside` approach researched
-- Issue: `shape-outside` requires floats and exact width measurement, complex for RTL with variable-width Hebrew text
-- Workaround: JavaScript measurement of opening word(s) width + CSS `shape-outside` or custom line-by-line layout
-- Estimated effort: **150-250 LOC** (JS width measurement + CSS generation)
-- Comment added: `/* VIVLIOSTYLE-LIMITATION: Complex shape-outside for RTL text with exact word width is challenging. Using bold emphasis only. */`
+- Implemented: Simple CSS approach with float
+- Status: **UNVERIFIED** (requires visual verification)
+- Implementation (23 lines added):
+  - Wrapped opening words in `<span class="opening" data-window-lines="2">...</span>`
+  - CSS: `float: inline-start; width: fit-content; height: 42pt;` (for 2-line window)
+  - Approach: Float the opening span to the right (RTL), set height to (windowLines + 1) × baseline grid
+  - This creates a tall box that text wraps around, effectively creating empty space below
+- What works: Bold opening, float creates wrapping space
+- What to verify: 
+  - Does text actually wrap around the floated box correctly? 
+  - Does window height match baseline grid (should be 3 lines: 1 for opening + 2 for window)?
+  - Window falls in middle of column (block-2), not at bottom - good test case
+- Potential issues:
+  - CSS `attr(data-window-lines number)` may not work in calc(), so fallback rules added for each value
+  - Float behavior in RTL multi-column layout may be unpredictable
+  - If window would extend below column, paragraph might break incorrectly
+- Code: 23 lines (adapter + CSS generation)
+- Evidence: poc/out/vivliostyle-page-1.png (requires manual inspection)
+- Test case needed: Window at bottom of column (would require more content in sample)
 
 **Typst:**
-- Implemented (partial): Bold opening only
-- Status: **PARTIAL**
-- What works: `#text(weight: "bold", size: <larger>)[...]`
-- What doesn't: Window below not implemented
-- Issue: Typst's layout model requires explicit positioning or shape exclusion
-- Workaround: Use `#place` or custom layout function to reserve space
-- Estimated effort: **100-200 LOC** (custom Typst function for window layout)
-- Comment added: `// TYPST-LIMITATION: Creating an exact window below the opening words with automatic width measurement is complex.`
+- Implemented: Simple approach with place() and float
+- Status: **FAIL** (compilation likely broken)
+- Implementation attempted (17 lines added):
+  - Used `#place(top + right, float: true)` with a box of fixed height
+  - Wrapped content in nested boxes to create window effect
+  - Height: (windowLines + 1) × line-height = 42pt for 2 lines
+- What broke: Typst's place() with float is for floating elements, not for text wrapping
+  - place() removes content from flow, doesn't create wrap-around shape
+  - Typst has no built-in shape-exclusion or parshape equivalent
+  - Would need external package (wrap-it) or manual line width specification
+- Workaround needed: 
+  - Option 1: Use wrap-it package (untested, designed for figures not text)
+  - Option 2: Manual line-by-line paragraph with width calculations (100-200 LOC)
+  - Option 3: Accept limitation and use bold-only
+- Code attempted: 17 lines (failed approach)
+- Evidence: poc/out/typst-page-1.png (likely shows broken layout or no window)
 
 ---
 

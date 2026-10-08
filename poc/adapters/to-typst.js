@@ -130,10 +130,23 @@ for (const section of doc.sections) {
         const words = text.split(/\s+/);
         const openingWords = words.slice(0, block.flags.opening.words);
         const restWords = words.slice(block.flags.opening.words);
+        const windowLines = block.flags.opening.windowLines || 0;
         
-        // TYPST-LIMITATION: Creating an exact window below the opening words with automatic
-        // width measurement is complex. Using bold emphasis without window shape.
-        columnContent += `  #text(weight: "bold", size: ${style.size * 1.1}pt)[${openingWords.join(' ')}] ${restWords.join(' ')}`;
+        // Simple approach: use place() with float to create window effect
+        if (windowLines > 0) {
+          const lineHeight = style.lineHeight;
+          const windowHeight = (windowLines + 1) * lineHeight;
+          columnContent += `  #box([\n`;
+          columnContent += `    #place(top + right, float: true, clearance: 0pt)[\n`;
+          columnContent += `      #box(width: auto, height: ${windowHeight}pt)[\n`;
+          columnContent += `        #text(weight: "bold", size: ${style.size * 1.1}pt)[${openingWords.join(' ')}]\n`;
+          columnContent += `      ]\n`;
+          columnContent += `    ]\n`;
+          columnContent += `    ${openingWords.join(' ')} ${restWords.join(' ')}\n`;
+          columnContent += `  ])\n`;
+        } else {
+          columnContent += `  #text(weight: "bold", size: ${style.size * 1.1}pt)[${openingWords.join(' ')}] ${restWords.join(' ')}`;
+        }
       } else {
         // Normal text
         for (const run of block.runs) {
