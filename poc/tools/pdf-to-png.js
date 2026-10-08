@@ -2,8 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 
-// Simple PDF to PNG converter using Node.js built-in capabilities
-// For Windows without external dependencies, we'll create a PowerShell script instead
+// PDF to PNG converter using pdf-to-img npm package
 
 const args = process.argv.slice(2);
 if (args.length < 2) {
@@ -12,79 +11,49 @@ if (args.length < 2) {
 }
 
 const pdfPath = path.resolve(args[0]);
-const outputPrefix = args[1];
+const outputPrefixArg = args[1];
+// Extract directory and filename from the prefix if it contains a path
+const outputDir = path.dirname(path.resolve(outputPrefixArg));
+const outputPrefix = path.basename(outputPrefixArg);
 
-// Generate PowerShell script for PDF to PNG conversion
-const psScript = `
-# PDF to PNG conversion using Windows built-in capabilities
-# Requires: Windows 10+ with PDF rendering capabilities
+console.log(`Converting PDF: ${pdfPath}`);
+console.log(`Output directory: ${outputDir}`);
+console.log(`Output prefix: ${outputPrefix}`);
 
-$pdfPath = "${pdfPath.replace(/\\/g, '\\\\')}"
-$outputDir = Split-Path -Parent $pdfPath
-$outputBase = "${outputPrefix}"
-
-Write-Host "Converting PDF to PNG..."
-Write-Host "PDF: $pdfPath"
-Write-Host "Output prefix: $outputBase"
-
-# Check if PDF exists
-if (-not (Test-Path $pdfPath)) {
-    Write-Error "PDF file not found: $pdfPath"
-    exit 1
+// Check if PDF exists
+if (!fs.existsSync(pdfPath)) {
+  console.error(`Error: PDF file not found: ${pdfPath}`);
+  process.exit(1);
 }
 
-# Try using magick (ImageMagick) if available
-$magickPath = (Get-Command magick -ErrorAction SilentlyContinue)
-if ($magickPath) {
-    Write-Host "Using ImageMagick..."
-    & magick convert -density 150 "$pdfPath" "$outputDir\\$outputBase-%d.png"
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "✓ Conversion successful"
-        exit 0
+async function convertPdfToPng() {
+  try {
+    // Import pdf-to-img dynamically since it's ES module
+    const { pdf } = await import('pdf-to-img');
+    
+    let pageNum = 1;
+    
+    console.log('Converting pages...');
+    
+    // Convert PDF to images
+    const document = await pdf(pdfPath, { scale: 2.0 }); // 2.0 = ~150 DPI for letter size
+    
+    for await (const image of document) {
+      const outputPath = path.join(outputDir, `${outputPrefix}-${pageNum}.png`);
+      fs.writeFileSync(outputPath, image);
+      console.log(`✓ Page ${pageNum}: ${outputPath}`);
+      pageNum++;
     }
+    
+    console.log(`\n✓ Conversion successful: ${pageNum - 1} page(s)`);
+  } catch (err) {
+    console.error('Error converting PDF:', err.message);
+    console.error('\nFallback options:');
+    console.error('1. Install ImageMagick: https://imagemagick.org/');
+    console.error('2. Install Poppler: https://github.com/oschwartz10612/poppler-windows/releases');
+    console.error('3. Convert manually: Open PDF, export each page as PNG');
+    process.exit(1);
+  }
 }
 
-# Try using pdftoppm if available
-$pdftoppmPath = (Get-Command pdftoppm -ErrorAction SilentlyContinue)
-if ($pdftoppmPath) {
-    Write-Host "Using pdftoppm..."
-    & pdftoppm -r 150 -png "$pdfPath" "$outputDir\\$outputBase"
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "✓ Conversion successful"
-        exit 0
-    }
-}
-
-Write-Host "⚠ No PDF conversion tool found (magick or pdftoppm)"
-Write-Host "Please install ImageMagick or Poppler utils, or convert manually"
-Write-Host "For manual conversion:"
-Write-Host "1. Open $pdfPath in a PDF reader"
-Write-Host "2. Export/save each page as PNG"
-Write-Host "3. Name files: $outputBase-1.png, $outputBase-2.png, etc."
-exit 1
-`;
-
-// Write and execute PowerShell script
-const psScriptPath = path.join(__dirname, 'pdf-to-png-temp.ps1');
-fs.writeFileSync(psScriptPath, psScript);
-
-console.log('Generated PowerShell conversion script');
-console.log(`Run: powershell -ExecutionPolicy Bypass -File "${psScriptPath}"`);
-
-// Try to execute
-const { execSync } = require('child_process');
-try {
-  execSync(`powershell -ExecutionPolicy Bypass -File "${psScriptPath}"`, {
-    stdio: 'inherit'
-  });
-} catch (err) {
-  console.error('Conversion failed or tool not available');
-  console.error('Please convert PDF pages to PNG manually or install ImageMagick');
-}
-
-// Cleanup
-try {
-  fs.unlinkSync(psScriptPath);
-} catch (e) {
-  // Ignore cleanup errors
-}
+convertPdfToPng();
