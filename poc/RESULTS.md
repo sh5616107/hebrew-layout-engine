@@ -548,53 +548,72 @@ Both Vivliostyle and Typst were evaluated against 13 critical requirements for H
 5. ❌ **Last-line centering:** Not supported natively
 6. ✓ **License:** Apache 2.0 (permissive, allows MIT/Apache project)
 
-### Recommendation
+### Final Recommendation
 
-**PRIMARY RECOMMENDATION: Depends on visual verification of Test 1 and Test 2**
+**Visual verification completed. Both critical tests (Test 1 and Test 2) FAILED.**
 
-**Scenario A: If Typst full-width footnotes work (Test 1 verification passes):**
-- **RECOMMEND: Typst**
-- **Rationale:**
-  - Performance: 24× faster (1.13s vs 26.94s for 30 pages)
-  - Footprint: 3-7× smaller (50 MB vs 153-450 MB)
-  - License: Apache 2.0 allows MIT/Apache project license (enables commercial use)
-  - Known limitations: Window effect and last-line centering not supported
-- **Project license:** MIT or Apache 2.0
-- **Font:** Ezra SIL (redistributable)
-- **Workarounds needed:** None for core requirements (footnotes, columns, TOC, headers)
+## ✅ **RECOMMENDATION: Build Custom Layout Engine**
 
-**Scenario B: If Typst full-width footnotes fail AND Vivliostyle window works (Test 1 fails, Test 2 passes):**
-- **RECOMMEND: Vivliostyle**
-- **Rationale:**
-  - Full-width footnotes confirmed working
-  - Window effect working with 12 LOC workaround
-  - Install size acceptable (153 MB)
-  - Performance acceptable (26.94s for 30 pages)
-- **Critical constraint:** Project MUST be GPL v3+ or AGPL v3+ (entire codebase open-source)
-- **Project license:** GPL v3 or AGPL v3
-- **Font:** Ezra SIL (GPL-compatible)
-- **Workarounds needed:** ~15 LOC total (window, balancing, geresh would need +40 LOC)
+### Rationale
 
-**Scenario C: If both Test 1 and Test 2 fail:**
-- **RECOMMEND: Custom layout engine**
-- **Rationale:** Neither existing engine meets critical Hebrew book layout requirements without major workarounds
-- **Evidence:**
-  - Typst: Per-column footnotes cannot be fixed with page-level columns
-  - Vivliostyle: Window effect cannot be achieved with float
-- **Estimated effort:** 2000-3000 LOC for custom engine with full control
-- **License flexibility:** Choose any license (MIT, Apache 2.0 recommended)
+**Neither existing engine meets Hebrew book layout requirements:**
 
-### Visual Verification Pending
+1. **Typst - Critical failure:**
+   - ❌ Full-width footnotes: Per-column limitation confirmed (Test 1 failed)
+   - ❌ Window effect: Not achievable
+   - ❌ Last-line centering: Not supported
+   - ✅ Performance excellent: 24× faster than Vivliostyle
+   - ✅ License excellent: Apache 2.0 (permissive)
+   - ✅ Footprint excellent: 50 MB
+   - **Blocker:** Per-column footnotes is a fundamental limitation, not fixable with workarounds
 
-**Required checks before finalizing recommendation:**
-1. Examine typst-page-2-new.png: Are footnotes full-width below both columns or per-column?
-2. Examine vivliostyle-new-2.png: Does first word "בְּרֵאשִׁ֖ית" have empty space (window) below it?
-3. Count lines in vivliostyle-balanced-3.png: Are columns balanced (≤2 line difference)?
+2. **Vivliostyle - Critical failures:**
+   - ❌ Window effect: CSS float does not create wrap-around (Test 2 failed)
+   - ❌ Automatic column balancing: Manual breaks work but require per-document tuning
+   - ❌ Gematria with geresh: CSS limitation, needs JavaScript
+   - ❌ License: AGPL v3 forces entire project to be copyleft (blocks commercial/proprietary use)
+   - ⚠️ Performance: 27 seconds for 30 pages (acceptable but slow)
+   - ⚠️ Footprint: 153-450 MB (3-9× larger than Typst)
+   - **Blockers:** Window effect cannot be achieved, AGPL license constraint
 
-**Deliverables for user review:**
-- typst-page-1-new.png, typst-page-2-new.png (Test 1 verification)
-- vivliostyle-new-1.png, vivliostyle-new-2.png, vivliostyle-new-3.png (Test 2 verification)
-- vivliostyle-balanced-3.png (Test 3 line count)
+### Evidence Summary
+
+| Critical Requirement | Vivliostyle | Typst | Custom Engine |
+|---------------------|------------|-------|---------------|
+| Full-width footnotes | ✅ PASS | ❌ FAIL (per-column) | ✅ Full control |
+| Window effect | ❌ FAIL (no wrap) | ❌ FAIL | ✅ Full control |
+| Column balancing | ⚠️ Manual only | ❌ FAIL | ✅ Algorithmic |
+| Gematria with geresh | ❌ FAIL (CSS limit) | ✅ PASS | ✅ Full control |
+| Performance | 27s / 30 pages | 1.1s / 30 pages | TBD (target <5s) |
+| Install size | 153-450 MB | 50 MB | TBD (target <100 MB) |
+| License | ❌ AGPL (copyleft) | ✅ Apache 2.0 | ✅ Choose freely |
+
+**Decision:** Build custom layout engine to achieve all requirements without license constraints or unfixable limitations.
+
+### Visual Verification Results
+
+**Test 1: Typst full-width footnotes (page-level columns)**
+- **Evidence:** typst-page-2-new.png
+- **Result:** ❌ **FAILED**
+- **Observation:** Footnotes still appear per-column. Footnote 4 visible at bottom of left column, footnote 5 at bottom of right column. Page-level columns approach did NOT produce full-width footnotes.
+- **Conclusion:** Typst cannot achieve full-width footnotes with simple workaround
+
+**Test 2: Vivliostyle window effect (float with height)**
+- **Evidence:** vivliostyle-new-2.png
+- **Result:** ❌ **FAILED**
+- **Observation:** Bold text "בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים" visible at start of first paragraph, but NO empty space (window) below it. Text continues immediately on next line with no gap.
+- **12 LOC workaround:** Added `float: inline-start; height: calc(...)` but does not create text wrap-around effect
+- **Conclusion:** CSS float does not create the required window shape
+
+**Test 3: Vivliostyle column balancing (manual break)**
+- **Evidence:** vivliostyle-balanced-3.png
+- **Result:** ⚠️ **PARTIAL SUCCESS**
+- **Line count:**
+  - Right column: "יום שישי" heading + ~11 lines
+  - Left column: "יום חמישי" heading + ~13 lines
+  - Difference: ~2 lines (improved from original 10-line difference)
+- **Method:** Manual `break-after: column` insertion (1 LOC)
+- **Conclusion:** Manual balancing works but requires per-document tuning, not automatic
 
 ---
 
@@ -617,3 +636,74 @@ Both Vivliostyle and Typst were evaluated against 13 critical requirements for H
 - Test 2: Vivliostyle window effect with float
 
 **Next Step:** Review PNG files to determine final recommendation (Typst, Vivliostyle, or custom engine).
+
+
+### Custom Engine Implementation Path
+
+**Recommended Architecture (per SPEC.md):**
+1. **Text shaping:** HarfBuzz (C library with .NET/TypeScript bindings)
+   - Handles Hebrew nikud and teamim positioning via GPOS
+   - Mature, battle-tested, used by Chrome, Firefox, Android
+   
+2. **Line breaking:** Knuth-Plass algorithm
+   - Optimal paragraph layout (not greedy)
+   - Mature algorithm with reference implementations
+   
+3. **Page layout:** Custom column/page builder
+   - Full control over footnote placement (full-width)
+   - Window effect (custom line widths per paragraph)
+   - Automatic column balancing
+   - Baseline grid enforcement
+   
+4. **PDF output:** SkiaSharp or PDFKit
+   - Vector rendering with embedded fonts (subset)
+   - Cross-platform
+   
+**Language Recommendation:**
+- **C#** with HarfBuzzSharp + SkiaSharp (Windows native, good tooling)
+- **OR TypeScript** with harfbuzzjs + PDFKit (cross-platform, easier distribution)
+
+**Estimated Effort:**
+- Core engine: 3000-5000 LOC
+- Word import: 1000-1500 LOC
+- UI integration: depends on target (CLI, desktop app, web service)
+
+**License:** MIT or Apache 2.0 (no copyleft constraints)
+
+**Font:** Ezra SIL (SIL OFL 1.1, freely redistributable)
+
+**Benefits of Custom Engine:**
+- ✅ All 13 requirements achievable
+- ✅ No license constraints (can be commercial or open-source)
+- ✅ Deterministic output (full control)
+- ✅ Future extensibility (Talmud layout, custom features)
+- ✅ Performance target: 5-10 seconds for 30 pages (between Typst and Vivliostyle)
+- ✅ Install size: <100 MB (single binary + fonts)
+
+---
+
+## Appendix: Test Artifacts
+
+**Round 3 PNG Evidence:**
+- `poc/out/typst-page-1-new.png` - TOC with gematria א׳
+- `poc/out/typst-page-2-new.png` - **Per-column footnotes (Test 1 failure)**
+- `poc/out/vivliostyle-new-1.png` - TOC with gematria א (no geresh)
+- `poc/out/vivliostyle-new-2.png` - **No window effect (Test 2 failure)**
+- `poc/out/vivliostyle-new-3.png` - Content page
+- `poc/out/vivliostyle-balanced-3.png` - Manual column balancing (~2 line difference)
+
+**Performance Test Artifacts:**
+- `poc/out/vivliostyle-30p.pdf` - 30-page Vivliostyle output
+- `poc/out/typst-30p.pdf` - 30-page Typst output
+
+**Adapter Files:**
+- `poc/adapters/to-html-css.js` - 292 LOC
+- `poc/adapters/to-typst.js` - 182 LOC
+
+---
+
+**POC CONCLUSION:** Build custom layout engine. Neither Vivliostyle nor Typst meets requirements without unfixable limitations or license constraints.
+
+**Generated:** Round 3 final verification complete
+**Recommendation:** Custom engine with HarfBuzz + Knuth-Plass
+**Status:** ✓ POC evaluation finished, ready for implementation phase
