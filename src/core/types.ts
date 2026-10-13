@@ -3,7 +3,7 @@
  * Follows specification v0.5, sections 4, 12
  */
 
-import type { Coord, Distance, Position, Rect } from './units.js';
+import type { Coord, Distance, Rect } from './units.js';
 
 /** Document metadata */
 export interface Meta {

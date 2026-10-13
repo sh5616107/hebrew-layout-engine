@@ -3,17 +3,18 @@
  * Converts text + font into positioned glyphs with proper diacritics
  */
 
-import type { Distance, Coord } from '../core/units.js';
 import type { PositionedGlyph, ShapedRun } from '../core/types.js';
 import { ptToMpt } from '../core/units.js';
 
 // Import harfbuzzjs
 // Note: May need to adjust import based on package structure
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let hb: any;
 
 /**
  * Initialize HarfBuzz (lazy load)
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function initHarfBuzz(): Promise<any> {
   if (hb) return hb;
   
@@ -42,19 +43,19 @@ export async function shape(
   fontSize: number,
   features?: Record<string, boolean>
 ): Promise<ShapedRun> {
-  const hbInstance = await initHarfBuzz();
+  await initHarfBuzz();
   
   // Create blob from font data
-  const blob = hbInstance.createBlob(fontBuffer);
-  const face = hbInstance.createFace(blob, 0);
-  const font = hbInstance.createFont(face);
+  const blob = hb.createBlob(fontBuffer);
+  const face = hb.createFace(blob, 0);
+  const font = hb.createFont(face);
   
   // Set font size (HarfBuzz uses 26.6 fixed-point, we use points)
   const scale = fontSize * 64; // Convert to 26.6 format
   font.setScale(scale, scale);
   
   // Create buffer
-  const buffer = hbInstance.createBuffer();
+  const buffer = hb.createBuffer();
   buffer.addText(text);
   buffer.guessSegmentProperties();
   
@@ -64,12 +65,13 @@ export async function shape(
     : [];
   
   // Shape!
-  hbInstance.shape(font, buffer, featureList);
+  hb.shape(font, buffer, featureList);
   
   // Get results
   const result = buffer.json(font);
   
   // Convert to our format
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const glyphs: PositionedGlyph[] = result.map((item: any) => ({
     glyphId: item.g,
     x: ptToMpt((item.dx || 0) / 64), // Convert from 26.6 to mpt
@@ -114,7 +116,7 @@ export async function shapeSync(
  * Get HarfBuzz version info
  */
 export async function getVersion(): Promise<string> {
-  const hbInstance = await initHarfBuzz();
+  await initHarfBuzz();
   // HarfBuzzJS may not expose version, return package version
   return 'harfbuzzjs-1.6.3';
 }

@@ -8,25 +8,15 @@ import PDFDocument from 'pdfkit';
 import { createWriteStream, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
-// Find David font
-const fontPaths = [
-  'C:\\Windows\\Fonts\\david.ttf',
-  'C:\\Windows\\Fonts\\arial.ttf',
-];
+// Use Ezra SIL font
+const fontPath = join(process.cwd(), 'fonts', 'SILEOT.ttf');
 
-let fontPath: string | null = null;
-for (const path of fontPaths) {
-  if (existsSync(path)) {
-    fontPath = path;
-    console.log(`Using font: ${path}`);
-    break;
-  }
-}
-
-if (!fontPath) {
-  console.error('No font found!');
+if (!existsSync(fontPath)) {
+  console.error(`Font not found: ${fontPath}`);
   process.exit(1);
 }
+
+console.log(`Using font: ${fontPath}`);
 
 // Load font
 const fontBuffer = readFileSync(fontPath).buffer;
