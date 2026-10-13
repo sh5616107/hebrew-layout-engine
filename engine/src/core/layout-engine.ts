@@ -191,7 +191,7 @@ function createPageLayout(
     x: rightX,
     width: columnWidth,
     lines: twoColumnLayout.rightColumn.lines.map((words, i) => ({
-      y: twoColumnLayout.rightColumn.lineYPositions[i],
+      y: twoColumnLayout.rightColumn.lineYPositions[i] ?? 0,
       words,
       x: rightX + columnWidth, // RTL: start from right edge
     })),
@@ -201,7 +201,7 @@ function createPageLayout(
     x: leftX,
     width: columnWidth,
     lines: twoColumnLayout.leftColumn.lines.map((words, i) => ({
-      y: twoColumnLayout.leftColumn.lineYPositions[i],
+      y: twoColumnLayout.leftColumn.lineYPositions[i] ?? 0,
       words,
       x: leftX + columnWidth, // RTL: start from right edge
     })),
