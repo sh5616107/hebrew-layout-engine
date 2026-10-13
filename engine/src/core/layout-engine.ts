@@ -10,6 +10,9 @@ import type { TwoColumnLayout } from '../layout/two-column-layout';
 import { breakLines } from '../line-breaking/greedy-breaker';
 import { layoutTwoColumns, calculateColumnWidth, getColumnXPosition } from '../layout/two-column-layout';
 
+// Re-export ShapedWord for convenience
+export type { ShapedWord };
+
 export interface LayoutConfig {
   /** Page width in points */
   pageWidth: number;
