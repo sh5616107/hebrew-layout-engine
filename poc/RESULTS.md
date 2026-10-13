@@ -11,7 +11,7 @@
 | 5 | TOC page with headings | PASS | PASS | **Typst:** typst-page-1.png shows "תוכן העניינים" heading with TOC entries listing all sections with dotted leaders and page numbers in gematria. **Vivliostyle:** vivliostyle-page-1.png shows "תוכן העניינים" heading with TOC entries listed. |
 | 6 | TOC page numbers at end of line (RTL left side) | PASS | FAIL | **Typst:** typst-page-1.png shows page numbers appearing at the left edge of each TOC line (RTL end), e.g. "בראשית ........................ 2". **Vivliostyle:** vivliostyle-page-1.png shows dots but no visible page numbers—the `target-counter()` appears to render as dots only. |
 | 7 | Footnote numbering (1, 2, 3...) | PASS | PASS | **Typst:** typst-page-2.png shows superscript footnote markers "¹" in body text and corresponding numbered footnotes at bottom. **Vivliostyle:** vivliostyle-page-2.png shows superscript markers "11" and "22" without duplication—single number per footnote. Previous duplicate marker issue resolved. |
-| 8 | Window effect (wrapped opening word) | FAIL | FAIL | **Typst:** typst-page-2.png shows bold opening text "בְּרֵאשִׁית בָּרָא אֱלֹהִים" inline with paragraph, no window/empty space below. Documented limitation: no wrap-it package available. **Vivliostyle:** vivliostyle-page-2.png shows "יוֹם שְׁלִישִׁי" as bold inline text, no visible wrapping or window effect. Float: inline-start attempted but no visual window space created. |
+| 8 | Window effect (wrapped opening word) | FAIL | FAIL | **Typst:** typst-page-2.png shows bold opening text "בְּרֵאשִׁית בָּרָא אֱלֹהִים" inline with paragraph, no window/empty space below. Documented limitation: wrap-it package exists (@preview/wrap-it:0.1.1) but requires explicit figure wrapping—not suitable for inline paragraph text without restructuring the document model. **Vivliostyle:** vivliostyle-page-2.png shows "יוֹם שְׁלִישִׁי" as bold inline text, no visible wrapping or window effect. Float: inline-start attempted but no visual window space created. |
 | 9 | Column balance (last page ≤1 line diff) | NOT TESTED | PASS | **Typst:** Only 3 pages generated in sample; no multi-column last page visible to measure. **Vivliostyle:** vivliostyle-page-21.png shows final page with left column ending mid-page and right column with ~2 lines of text—columns appear balanced within acceptable range. |
 | 10 | Bold phrase inline in paragraph | PASS | PASS | **Typst:** typst-page-2.png shows bold opening "בְּרֵאשִׁית בָּרָא אֱלֹהִים" as part of first paragraph without line break. **Vivliostyle:** vivliostyle-page-2.png shows bold "יוֹם שְׁלִישִׁי" inline with paragraph text, not separated. |
 | 11 | Line spacing consistent | PASS | PASS | **Typst:** typst-page-2.png and typst-page-3.png show uniform line spacing throughout body text, consistent leading between lines. **Vivliostyle:** vivliostyle-page-2.png shows consistent line spacing in both columns with uniform vertical rhythm. |
@@ -30,7 +30,7 @@
 - All Round 3 improvements retained: `#outline()` for TOC, gematria with geresh marks (א׳, ב׳, etc.), correct line spacing, bold phrase inline
 
 **Documented limitations:**
-- Window effect: No wrap-it package available in Typst stable; no built-in shape-outside or float positioning
+- Window effect: wrap-it package exists (@preview/wrap-it:0.1.1) but requires explicit figure wrapping—not suitable for inline paragraph text without document model restructuring
 - Last-line centering: No `text-align-last` equivalent; `set par(last-line-end-indent: ...)` only affects indentation, not alignment
 
 ### Vivliostyle Adapter (to-html-css.js)
@@ -69,10 +69,11 @@ The following items could not be fully confirmed from the generated PNGs:
 ### Window Effect
 
 **Typst:**
-- Searched for `wrap-it` package in Typst universe—not found in stable release as of v0.15.1
-- Attempted import with `#import "@preview/wrap-it:0.1.0"` syntax—package does not exist
-- Typst lacks built-in CSS-style `shape-outside` or float positioning
-- Workaround would require: manual grid positioning or spacing calculations (breaks natural flow)
+- Package exists: `@preview/wrap-it:0.1.1` (confirmed on Typst Universe 2026-10-13)
+- Architecture: Requires wrapping figures/images in content blocks using `wrap-content()` function
+- **Issue:** wrap-it works for images/figures but not for inline paragraph text without restructuring
+- To support window effect would require: converting opening words to figure-like content blocks (breaks natural paragraph flow)
+- Workaround complexity: High (200-300 LOC to restructure document model)
 - **Current implementation:** Bold opening words rendered inline, no window space
 
 **Vivliostyle:**
@@ -114,11 +115,11 @@ The following items could not be fully confirmed from the generated PNGs:
 
 ---
 
-**Evidence files:** All PNG files referenced above are located in `c:\proyecys\layout engine\poc\out\`
+**Evidence files:** All PNG files referenced above are located in `../docs/evidence/`
 - Typst pages: `typst-page-1.png`, `typst-page-2.png`, `typst-page-3.png`
-- Vivliostyle pages: `vivliostyle-page-1.png` through `vivliostyle-page-21.png`
+- Vivliostyle pages: `vivliostyle-page-1.png`, `vivliostyle-page-2.png`, `vivliostyle-page-21.png`
 
-**Verification date:** Round 4 final verification
+**Verification date:** Round 4 final verification (2026-10-12)
 **Status:** Code changes complete, outputs regenerated, requirements verified against PNG evidence
 
 
@@ -159,8 +160,10 @@ The following items could not be fully confirmed from the generated PNGs:
 | Full-width footnotes | ✅ PASS | ✅ PASS | Tie |
 | TOC with page numbers | ✅ PASS | ❌ FAIL (renders dots) | **Typst** |
 | Window effect | ❌ FAIL | ❌ FAIL | Tie |
-| Performance (30 pages) | 1.1s | 27s | **Typst** (24×) |
+| Performance (30 pages) | 1.1s | 27s | **Typst** (24×) *|
 | Install size | 50 MB | 153-450 MB | **Typst** (3-9×) |
+
+\* Performance test used duplicated content (10× repeat); real-world unique text may differ.
 | License | Apache 2.0 | AGPL v3 | **Typst** |
 | Gematria with geresh | ✅ PASS (א׳) | ❌ FAIL (א) | **Typst** |
 | Column balancing | N/A | ✅ PASS | Vivliostyle |
@@ -180,6 +183,7 @@ The following items could not be fully confirmed from the generated PNGs:
 
 2. **Performance advantage:**
    - 24× faster than Vivliostyle (1.1s vs 27s for 30 pages)
+   - **Note:** Sample is duplicated content (10× repeat of 3-page text), not unique 30 pages. Real-world performance may vary with unique content.
    - Critical for real-time editing and batch processing
 
 3. **License freedom:**
@@ -203,7 +207,7 @@ The following items could not be fully confirmed from the generated PNGs:
 
 **Implementation path with Typst:**
 1. Use Typst as rendering backend
-2. Adapter LOC: 182 lines (measured)
+2. Adapter LOC: 201 lines (measured 2026-10-13)
 3. Total workaround code: 15 lines (measured)
 4. Project license: MIT or Apache 2.0
 5. Font: Ezra SIL (SIL OFL 1.1, redistributable)
@@ -219,7 +223,7 @@ The following items could not be fully confirmed from the generated PNGs:
 ### Action Items
 
 1. ✅ POC complete with verified evidence (all PNG files available)
-2. ✅ Adapters functional and measured (Typst: 182 LOC, Vivliostyle: 292 LOC)
+2. ✅ Adapters functional and measured (Typst: 201 LOC, Vivliostyle: 300 LOC, measured 2026-10-13)
 3. ✅ Performance benchmarked (Typst 24× faster)
 4. ✅ Licensing analyzed (Apache 2.0 vs AGPL v3)
 5. Next: Proceed with Typst integration OR plan custom engine if window effect is mandatory
