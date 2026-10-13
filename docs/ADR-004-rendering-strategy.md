@@ -1,8 +1,8 @@
 # ADR-004: PDF Rendering Strategy
 
-**Date:** 2026-10-13  
-**Status:** Proposed (POC completed, pending M1 validation)  
-**Decision:** Use PDFKit doc.text() for M0-M1, evaluate direct glyph rendering for M2+
+**Date:** 2026-10-13 (Updated: 2026-10-13 with width comparison)  
+**Status:** Proposed (POC completed, width deviation measured)  
+**Decision:** Use PDFKit doc.text() for M0-M1 with awareness of limitations, plan word/glyph-level drawing for M2+
 
 ---
 
@@ -107,18 +107,29 @@ doc.addContent('ET');
 
 ## Decision
 
-### For M0-M1: Use PDFKit `doc.text()`
+### For M0-M1: Use PDFKit `doc.text()` for rendering, HarfBuzz for measurement
 
 **Rationale:**
 1. **Fast to implement** - works now
-2. **Proven to work** - nikud renders correctly
+2. **Proven to work** - nikud renders correctly (visual test passed)
 3. **Focus on core layout** - don't get blocked on rendering details
-4. **Good enough for POC** - demonstrates feasibility
+4. **Width deviation documented** - 70% perfect, up to 5.91% on te'amim
+
+**Architecture:**
+```typescript
+// MEASURE with HarfBuzz (accurate)
+const shaped = shapeText(text, font, size);
+const width = shaped.glyphs.reduce((sum, g) => sum + g.xAdvance, 0);
+
+// RENDER with PDFKit (convenient)
+doc.font('Ezra').fontSize(size);
+doc.text(text, x, y, { lineBreak: false });
+```
 
 **Limitations accepted:**
-- Can't implement Knuth-Plass line breaking (M1 uses greedy anyway)
-- Can't measure exact line widths pre-render (estimate from HarfBuzz)
-- Can't debug glyph-level issues (trust PDFKit + HarfBuzz)
+- PDFKit.widthOfString() **NOT USED** - we measure with HarfBuzz instead
+- Greedy line breaking (M1) doesn't need sub-pixel precision
+- Visual appearance correct despite measurement differences
 
 ### For M2+: Re-evaluate
 
@@ -138,7 +149,7 @@ doc.addContent('ET');
 
 ## POC Results
 
-**Test:** `tools/render-comparison.ts`
+### Test 1: Visual Rendering (`tools/render-comparison.ts`)
 
 **Rendered:**
 - Text: "בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים" (with nikud + teamim)
@@ -152,7 +163,45 @@ doc.addContent('ET');
 - ✅ Zero-advance marks positioned correctly
 - ⚠️ Manual positioning **blocked** by PDFKit API limitations
 
-**Recommendation:** PDFKit `doc.text()` is sufficient for M0-M2.
+### Test 2: Width Comparison (`tools/compare-word-widths.ts`)
+
+**Method:**
+- 100 unique Hebrew words from corpus
+- Font size: 12pt
+- HarfBuzz: Sum of xAdvance values
+- PDFKit: `doc.widthOfString()`
+
+**Results:**
+
+| Metric | Value |
+|--------|-------|
+| Perfect matches (Δ < 0.01pt) | 70 (70.0%) |
+| Large deltas (Δ > 1%) | 13 (13.0%) |
+| **Average delta** | **0.103pt (0.34%)** |
+| **Maximum delta** | **1.465pt (5.91%)** |
+
+**Worst cases (words with te'amim):**
+
+| Word | HarfBuzz | PDFKit | Delta | Delta% |
+|------|----------|--------|-------|--------|
+| וַיַּ֧רְא | 24.803pt | 23.338pt | 1.465pt | **5.91%** |
+| וַיַּ֥רְא | 24.217pt | 23.338pt | 0.879pt | 3.63% |
+| וַֽיְהִי־אֽוֹר׃ | 50.443pt | 49.857pt | 0.586pt | 1.16% |
+
+**Analysis:**
+- ✅ **70% of words match perfectly** - PDFKit and HarfBuzz align on most text
+- ⚠️ **Significant deviation on te'amim** - up to 5.91% on complex marks
+- ⚠️ **13% of words exceed 1% deviation** - mostly words with te'amim
+- ❌ **PDFKit.widthOfString() is NOT SUFFICIENT for precise measurement**
+
+**Impact:**
+- M0-M1: Acceptable for prototyping (visual appearance correct)
+- M2+: **Must implement word/glyph-level measurement** for:
+  - Knuth-Plass line breaking (needs exact widths)
+  - Column balancing (precision matters)
+  - Optimal page filling (cost function depends on accurate metrics)
+
+**Recommendation:** PDFKit `doc.text()` OK for **rendering**, but **measure with HarfBuzz** for layout algorithms.
 
 ---
 
@@ -243,6 +292,15 @@ for (const glyph of shaped.glyphs) {
 
 ---
 
-**Evidence:** `out/render-comparison.pdf`, `tools/check-gpos.ts`  
-**Test:** `tools/render-comparison.ts`  
-**Date:** 2026-10-13
+**Evidence:**
+- Visual rendering: `out/render-comparison.pdf`
+- Width comparison: `out/width-comparison.json` (100 words)
+- Y-offset check: `out/y-offset-check.pdf`
+- GPOS verification: `tools/check-gpos.ts`
+
+**Tests:**
+- `tools/render-comparison.ts` - visual check
+- `tools/compare-word-widths.ts` - quantitative width comparison
+- `tools/check-y-offsets.ts` - offset and features verification
+
+**Updated:** 2026-10-13

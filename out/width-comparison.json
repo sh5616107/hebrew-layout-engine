@@ -1,0 +1,702 @@
+[
+  {
+    "word": "וַיַּ֧רְא",
+    "harfbuzzWidth": 24.802734375,
+    "pdfkitWidth": 23.337890625,
+    "delta": 1.46484375,
+    "deltaPercent": 5.905976848570753
+  },
+  {
+    "word": "וַיַּ֥רְא",
+    "harfbuzzWidth": 24.216796875,
+    "pdfkitWidth": 23.337890625,
+    "delta": 0.87890625,
+    "deltaPercent": 3.6293249455601257
+  },
+  {
+    "word": "וַֽיְהִי־אֽוֹר׃",
+    "harfbuzzWidth": 50.443359375,
+    "pdfkitWidth": 49.857421875,
+    "delta": 0.5859375,
+    "deltaPercent": 1.1615750958299456
+  },
+  {
+    "word": "וַֽיְהִי־עֶ֥רֶב",
+    "harfbuzzWidth": 49.5703125,
+    "pdfkitWidth": 48.984375,
+    "delta": 0.5859375,
+    "deltaPercent": 1.1820330969267139
+  },
+  {
+    "word": "וַֽיְהִי־בֹ֖קֶר",
+    "harfbuzzWidth": 49.76953125,
+    "pdfkitWidth": 49.18359375,
+    "delta": 0.5859375,
+    "deltaPercent": 1.177301624676242
+  },
+  {
+    "word": "וַֽיְהִי־כֵֽן׃",
+    "harfbuzzWidth": 42.955078125,
+    "pdfkitWidth": 42.369140625,
+    "delta": 0.5859375,
+    "deltaPercent": 1.3640703860319192
+  },
+  {
+    "word": "כִּי־ט֑וֹב",
+    "harfbuzzWidth": 37.46484375,
+    "pdfkitWidth": 36.990234375,
+    "delta": 0.474609375,
+    "deltaPercent": 1.2668126368470443
+  },
+  {
+    "word": "כִּי־טֽוֹב׃",
+    "harfbuzzWidth": 42.228515625,
+    "pdfkitWidth": 41.75390625,
+    "delta": 0.474609375,
+    "deltaPercent": 1.1239073123352297
+  },
+  {
+    "word": "בְּרֵאשִׁית",
+    "harfbuzzWidth": 43.259765625,
+    "pdfkitWidth": 43.552734375,
+    "delta": 0.29296875,
+    "deltaPercent": 0.6772314777190843
+  },
+  {
+    "word": "בְּרֵאשִׁ֖ית",
+    "harfbuzzWidth": 43.259765625,
+    "pdfkitWidth": 43.552734375,
+    "delta": 0.29296875,
+    "deltaPercent": 0.6772314777190843
+  },
+  {
+    "word": "בָּרָ֣א",
+    "harfbuzzWidth": 22.93359375,
+    "pdfkitWidth": 23.2265625,
+    "delta": 0.29296875,
+    "deltaPercent": 1.2774655084312723
+  },
+  {
+    "word": "וַיֹּ֥אמֶר",
+    "harfbuzzWidth": 31.41796875,
+    "pdfkitWidth": 31.125,
+    "delta": 0.29296875,
+    "deltaPercent": 0.9324878776575904
+  },
+  {
+    "word": "וַיַּבְדֵּ֣ל",
+    "harfbuzzWidth": 32.3203125,
+    "pdfkitWidth": 32.02734375,
+    "delta": 0.29296875,
+    "deltaPercent": 0.9064539521392313
+  },
+  {
+    "word": "בֵּ֥ין",
+    "harfbuzzWidth": 16.142578125,
+    "pdfkitWidth": 16.435546875,
+    "delta": 0.29296875,
+    "deltaPercent": 1.8148820326678767
+  },
+  {
+    "word": "וַיִּקְרָ֨א",
+    "harfbuzzWidth": 30.9375,
+    "pdfkitWidth": 30.64453125,
+    "delta": 0.29296875,
+    "deltaPercent": 0.946969696969697
+  },
+  {
+    "word": "וַיֹּ֣אמֶר",
+    "harfbuzzWidth": 31.41796875,
+    "pdfkitWidth": 31.125,
+    "delta": 0.29296875,
+    "deltaPercent": 0.9324878776575904
+  },
+  {
+    "word": "בְּת֣וֹךְ",
+    "harfbuzzWidth": 27.71484375,
+    "pdfkitWidth": 28.0078125,
+    "delta": 0.29296875,
+    "deltaPercent": 1.0570824524312896
+  },
+  {
+    "word": "וַיַּ֣עַשׂ",
+    "harfbuzzWidth": 23.87109375,
+    "pdfkitWidth": 23.578125,
+    "delta": 0.29296875,
+    "deltaPercent": 1.2272950417280315
+  },
+  {
+    "word": "וַיַּבְדֵּ֗ל",
+    "harfbuzzWidth": 32.3203125,
+    "pdfkitWidth": 32.02734375,
+    "delta": 0.29296875,
+    "deltaPercent": 0.9064539521392313
+  },
+  {
+    "word": "בֵּ֤ין",
+    "harfbuzzWidth": 16.142578125,
+    "pdfkitWidth": 16.435546875,
+    "delta": 0.29296875,
+    "deltaPercent": 1.8148820326678767
+  },
+  {
+    "word": "וַיִּקְרָ֧א",
+    "harfbuzzWidth": 30.9375,
+    "pdfkitWidth": 30.64453125,
+    "delta": 0.29296875,
+    "deltaPercent": 0.946969696969697
+  },
+  {
+    "word": "מִתַּ֣חַת",
+    "harfbuzzWidth": 31.798828125,
+    "pdfkitWidth": 31.669921875,
+    "delta": 0.12890625,
+    "deltaPercent": 0.40538050488299243
+  },
+  {
+    "word": "מִתַּ֤חַת",
+    "harfbuzzWidth": 31.798828125,
+    "pdfkitWidth": 31.669921875,
+    "delta": 0.12890625,
+    "deltaPercent": 0.40538050488299243
+  },
+  {
+    "word": "הַמָּֽיִם׃",
+    "harfbuzzWidth": 32.677734375,
+    "pdfkitWidth": 32.595703125,
+    "delta": 0.08203125,
+    "deltaPercent": 0.25103102026178953
+  },
+  {
+    "word": "הַמָּ֑יִם",
+    "harfbuzzWidth": 27.9140625,
+    "pdfkitWidth": 27.83203125,
+    "delta": 0.08203125,
+    "deltaPercent": 0.2938706968933669
+  },
+  {
+    "word": "הַמַּ֙יִם֙",
+    "harfbuzzWidth": 27.9140625,
+    "pdfkitWidth": 27.83203125,
+    "delta": 0.08203125,
+    "deltaPercent": 0.2938706968933669
+  },
+  {
+    "word": "הַמַּ֔יִם",
+    "harfbuzzWidth": 27.9140625,
+    "pdfkitWidth": 27.83203125,
+    "delta": 0.08203125,
+    "deltaPercent": 0.2938706968933669
+  },
+  {
+    "word": "הַמַּ֜יִם",
+    "harfbuzzWidth": 27.9140625,
+    "pdfkitWidth": 27.83203125,
+    "delta": 0.08203125,
+    "deltaPercent": 0.2938706968933669
+  },
+  {
+    "word": "הַמַּ֖יִם",
+    "harfbuzzWidth": 27.9140625,
+    "pdfkitWidth": 27.83203125,
+    "delta": 0.08203125,
+    "deltaPercent": 0.2938706968933669
+  },
+  {
+    "word": "יַמִּ֑ים",
+    "harfbuzzWidth": 23.876953125,
+    "pdfkitWidth": 23.794921875,
+    "delta": 0.08203125,
+    "deltaPercent": 0.34355828220858897
+  },
+  {
+    "word": "תוכן",
+    "harfbuzzWidth": 23.7421875,
+    "pdfkitWidth": 23.7421875,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "העניינים",
+    "harfbuzzWidth": 43.65234375,
+    "pdfkitWidth": 43.65234375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "בראשית",
+    "harfbuzzWidth": 43.552734375,
+    "pdfkitWidth": 43.552734375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "יום",
+    "harfbuzzWidth": 16.001953125,
+    "pdfkitWidth": 16.001953125,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "ראשון",
+    "harfbuzzWidth": 32.07421875,
+    "pdfkitWidth": 32.07421875,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "שני",
+    "harfbuzzWidth": 16.62890625,
+    "pdfkitWidth": 16.62890625,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "שלישי",
+    "harfbuzzWidth": 32.724609375,
+    "pdfkitWidth": 32.724609375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "רביעי",
+    "harfbuzzWidth": 31.27734375,
+    "pdfkitWidth": 31.27734375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "חמישי",
+    "harfbuzzWidth": 32.349609375,
+    "pdfkitWidth": 32.349609375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "שישי",
+    "harfbuzzWidth": 24.85546875,
+    "pdfkitWidth": 24.85546875,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "אֱלֹהִ֑ים",
+    "harfbuzzWidth": 35.947265625,
+    "pdfkitWidth": 35.947265625,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "אֵ֥ת",
+    "harfbuzzWidth": 15.052734375,
+    "pdfkitWidth": 15.052734375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "הַשָּׁמַ֖יִם",
+    "harfbuzzWidth": 36.2109375,
+    "pdfkitWidth": 36.2109375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "וְאֵ֥ת",
+    "harfbuzzWidth": 19.095703125,
+    "pdfkitWidth": 19.095703125,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "הָאָֽרֶץ׃",
+    "harfbuzzWidth": 35.185546875,
+    "pdfkitWidth": 35.185546875,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "וְהָאָ֗רֶץ",
+    "harfbuzzWidth": 34.46484375,
+    "pdfkitWidth": 34.46484375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "הָיְתָ֥ה",
+    "harfbuzzWidth": 28.119140625,
+    "pdfkitWidth": 28.119140625,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "תֹ֙הוּ֙",
+    "harfbuzzWidth": 20.02734375,
+    "pdfkitWidth": 20.02734375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "וָבֹ֔הוּ",
+    "harfbuzzWidth": 24.15234375,
+    "pdfkitWidth": 24.15234375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "וְחֹ֖שֶׁךְ",
+    "harfbuzzWidth": 28.59375,
+    "pdfkitWidth": 28.59375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "עַל־פְּנֵ֣י",
+    "harfbuzzWidth": 36.19921875,
+    "pdfkitWidth": 36.19921875,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "תְה֑וֹם",
+    "harfbuzzWidth": 27.9375,
+    "pdfkitWidth": 27.9375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "וְר֣וּחַ",
+    "harfbuzzWidth": 24.263671875,
+    "pdfkitWidth": 24.263671875,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "אֱלֹהִ֔ים",
+    "harfbuzzWidth": 35.947265625,
+    "pdfkitWidth": 35.947265625,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "מְרַחֶ֖פֶת",
+    "harfbuzzWidth": 39.2578125,
+    "pdfkitWidth": 39.2578125,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "עַל־פְּנֵ֥י",
+    "harfbuzzWidth": 36.19921875,
+    "pdfkitWidth": 36.19921875,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "אֱלֹהִ֖ים",
+    "harfbuzzWidth": 35.947265625,
+    "pdfkitWidth": 35.947265625,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "יְהִ֣י",
+    "harfbuzzWidth": 16.18359375,
+    "pdfkitWidth": 16.18359375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "א֑וֹר",
+    "harfbuzzWidth": 19.2890625,
+    "pdfkitWidth": 19.2890625,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "אֱלֹהִ֛ים",
+    "harfbuzzWidth": 35.947265625,
+    "pdfkitWidth": 35.947265625,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "אֶת־הָא֖וֹר",
+    "harfbuzzWidth": 48.005859375,
+    "pdfkitWidth": 48.005859375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "הָא֖וֹר",
+    "harfbuzzWidth": 27.375,
+    "pdfkitWidth": 27.375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "וּבֵ֥ין",
+    "harfbuzzWidth": 20.478515625,
+    "pdfkitWidth": 20.478515625,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "הַחֹֽשֶׁךְ׃",
+    "harfbuzzWidth": 37.400390625,
+    "pdfkitWidth": 37.400390625,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "אֱלֹהִ֤ים",
+    "harfbuzzWidth": 35.947265625,
+    "pdfkitWidth": 35.947265625,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "לָאוֹר֙",
+    "harfbuzzWidth": 27.158203125,
+    "pdfkitWidth": 27.158203125,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "י֔וֹם",
+    "harfbuzzWidth": 16.001953125,
+    "pdfkitWidth": 16.001953125,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "וְלַחֹ֖שֶׁךְ",
+    "harfbuzzWidth": 36.462890625,
+    "pdfkitWidth": 36.462890625,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "קָ֣רָא",
+    "harfbuzzWidth": 22.552734375,
+    "pdfkitWidth": 22.552734375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "לָ֑יְלָה",
+    "harfbuzzWidth": 27.873046875,
+    "pdfkitWidth": 27.873046875,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "י֥וֹם",
+    "harfbuzzWidth": 16.001953125,
+    "pdfkitWidth": 16.001953125,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "אֶחָֽד׃",
+    "harfbuzzWidth": 28.08984375,
+    "pdfkitWidth": 28.08984375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "יְהִ֥י",
+    "harfbuzzWidth": 16.18359375,
+    "pdfkitWidth": 16.18359375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "רָקִ֖יעַ",
+    "harfbuzzWidth": 26.5546875,
+    "pdfkitWidth": 26.5546875,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "וִיהִ֣י",
+    "harfbuzzWidth": 20.2265625,
+    "pdfkitWidth": 20.2265625,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "מַבְדִּ֔יל",
+    "harfbuzzWidth": 35.771484375,
+    "pdfkitWidth": 35.771484375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "מַ֖יִם",
+    "harfbuzzWidth": 19.74609375,
+    "pdfkitWidth": 19.74609375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "לָמָֽיִם׃",
+    "harfbuzzWidth": 32.37890625,
+    "pdfkitWidth": 32.37890625,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "אֱלֹהִים֮",
+    "harfbuzzWidth": 35.947265625,
+    "pdfkitWidth": 35.947265625,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "אֶת־הָרָקִיעַ֒",
+    "harfbuzzWidth": 55.271484375,
+    "pdfkitWidth": 55.271484375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "אֲשֶׁר֙",
+    "harfbuzzWidth": 23.625,
+    "pdfkitWidth": 23.625,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "לָרָקִ֔יעַ",
+    "harfbuzzWidth": 34.423828125,
+    "pdfkitWidth": 34.423828125,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "וּבֵ֣ין",
+    "harfbuzzWidth": 20.478515625,
+    "pdfkitWidth": 20.478515625,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "אֲשֶׁ֖ר",
+    "harfbuzzWidth": 23.625,
+    "pdfkitWidth": 23.625,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "מֵעַ֣ל",
+    "harfbuzzWidth": 22.763671875,
+    "pdfkitWidth": 22.763671875,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "לָרָקִ֑יעַ",
+    "harfbuzzWidth": 34.423828125,
+    "pdfkitWidth": 34.423828125,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "לָֽרָקִ֖יעַ",
+    "harfbuzzWidth": 34.423828125,
+    "pdfkitWidth": 34.423828125,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "שָׁמָ֑יִם",
+    "harfbuzzWidth": 28.125,
+    "pdfkitWidth": 28.125,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "שֵׁנִֽי׃",
+    "harfbuzzWidth": 21.392578125,
+    "pdfkitWidth": 21.392578125,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "אֱלֹהִ֗ים",
+    "harfbuzzWidth": 35.947265625,
+    "pdfkitWidth": 35.947265625,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "יִקָּו֨וּ",
+    "harfbuzzWidth": 19.44140625,
+    "pdfkitWidth": 19.44140625,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "הַשָּׁמַ֙יִם֙",
+    "harfbuzzWidth": 36.2109375,
+    "pdfkitWidth": 36.2109375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "אֶל־מָק֣וֹם",
+    "harfbuzzWidth": 47.6484375,
+    "pdfkitWidth": 47.6484375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "אֶחָ֔ד",
+    "harfbuzzWidth": 23.326171875,
+    "pdfkitWidth": 23.326171875,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "וְתֵרָאֶ֖ה",
+    "harfbuzzWidth": 35.2734375,
+    "pdfkitWidth": 35.2734375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "הַיַּבָּשָׁ֑ה",
+    "harfbuzzWidth": 36.580078125,
+    "pdfkitWidth": 36.580078125,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "לַיַּבָּשָׁה֙",
+    "harfbuzzWidth": 36.36328125,
+    "pdfkitWidth": 36.36328125,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "אֶ֔רֶץ",
+    "harfbuzzWidth": 22.3359375,
+    "pdfkitWidth": 22.3359375,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "וּלְמִקְוֵ֥ה",
+    "harfbuzzWidth": 39.134765625,
+    "pdfkitWidth": 39.134765625,
+    "delta": 0,
+    "deltaPercent": 0
+  },
+  {
+    "word": "קָרָ֣א",
+    "harfbuzzWidth": 22.552734375,
+    "pdfkitWidth": 22.552734375,
+    "delta": 0,
+    "deltaPercent": 0
+  }
+]
