@@ -1,0 +1,56 @@
+{
+  "name": "@hebrew-layout/engine",
+  "version": "0.1.0",
+  "description": "Hebrew book layout engine with precise column balancing",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest",
+    "test:unit": "vitest run --dir tests/unit",
+    "test:integration": "vitest run --dir tests/integration",
+    "test:acceptance": "vitest run --dir tests/acceptance",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "hebrew",
+    "typesetting",
+    "layout",
+    "pdf",
+    "rtl",
+    "column-balancing"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/pdfkit": "^0.17.6",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "dependencies": {
+    "harfbuzzjs": "^1.6.3",
+    "pdfkit": "^0.15.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

@@ -39,5 +39,5 @@ yarn-error.log*
 *.temp
 .cache/
 
-# Subprojects (each has its own git)
-/engine/
+# Subprojects (each has its own git) - REMOVED for monorepo
+# /engine/
