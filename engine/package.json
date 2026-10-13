@@ -48,7 +48,8 @@
   },
   "dependencies": {
     "harfbuzzjs": "^1.6.3",
-    "pdfkit": "^0.15.0"
+    "pdfkit": "^0.15.0",
+    "unicode-bidirectional": "^2.0.5"
   },
   "engines": {
     "node": ">=22.0.0"
