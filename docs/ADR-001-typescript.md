@@ -1,6 +1,6 @@
 # ADR-001: TypeScript as Implementation Language
 
-**Status:** Accepted  
+**Status:** Proposed (pending C# POC comparison per section 26)  
 **Date:** 2026-10-12  
 **Deciders:** Project team
 

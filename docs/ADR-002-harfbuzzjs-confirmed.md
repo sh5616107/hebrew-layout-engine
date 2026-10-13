@@ -1,6 +1,6 @@
 # ADR-002: HarfBuzzJS v1.6.3 (Updated after Feasibility Test)
 
-**Status:** ✅ **CONFIRMED** - Feasibility test passed  
+**Status:** Proposed (feasibility confirmed, pending architectural decision per section 26)  
 **Date:** 2026-10-12  
 **Previous:** ADR-002-harfbuzz-wasm.md (initial proposal)
 

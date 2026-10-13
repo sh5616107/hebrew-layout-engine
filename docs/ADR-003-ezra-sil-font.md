@@ -1,7 +1,7 @@
 # ADR-003: Ezra SIL as Primary Font
 
 **Date:** 2026-10-12  
-**Status:** Accepted  
+**Status:** Proposed (verified working, pending final decision per section 26)  
 **Decision:** Use Ezra SIL v2.51 as primary font for engine
 
 ## Context
