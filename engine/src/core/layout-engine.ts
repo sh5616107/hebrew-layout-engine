@@ -8,7 +8,12 @@
 import type { ShapedWord } from '../line-breaking/greedy-breaker';
 import type { TwoColumnLayout } from '../layout/two-column-layout';
 import { breakLines } from '../line-breaking/greedy-breaker';
-import { layoutTwoColumns, calculateColumnWidth, getColumnXPosition } from '../layout/two-column-layout';
+import { 
+  layoutTwoColumns, 
+  layoutTwoColumnsBalanced,
+  calculateColumnWidth, 
+  getColumnXPosition 
+} from '../layout/two-column-layout';
 
 // Re-export ShapedWord for convenience
 export type { ShapedWord };
@@ -34,6 +39,10 @@ export interface LayoutConfig {
   wordSpacing: number;
   /** Font size in points */
   fontSize: number;
+  /** Page policy: 'fill' (default) or 'balanced' */
+  pagePolicy?: 'fill' | 'balanced';
+  /** Balance tolerance in points (default: 0 = perfect balance) */
+  balanceTolerance?: number;
 }
 
 export interface LayoutResult {
@@ -87,6 +96,8 @@ export const DEFAULT_CONFIG: LayoutConfig = {
   lineHeight: 14,
   wordSpacing: 3.5,
   fontSize: 12,
+  pagePolicy: 'fill', // Default: fill columns top-to-bottom
+  balanceTolerance: 0, // Default: perfect balance (when policy='balanced')
 };
 
 /**
@@ -124,13 +135,22 @@ export function layoutDocument(
 
   // Step 2: Distribute lines across pages
   while (remainingLines.length > 0) {
-    const twoColumnLayout = layoutTwoColumns(remainingLines, {
-      pageHeight: fullConfig.pageHeight,
-      lineHeight: fullConfig.lineHeight,
-      topMargin: fullConfig.topMargin,
-      bottomMargin: fullConfig.bottomMargin,
-      columnGap: fullConfig.columnGap,
-    });
+    // Choose layout function based on policy
+    const useBalanced = fullConfig.pagePolicy === 'balanced';
+    
+    const twoColumnLayout = useBalanced
+      ? layoutTwoColumnsBalanced(remainingLines, {
+          pageHeight: fullConfig.pageHeight,
+          lineHeight: fullConfig.lineHeight,
+          topMargin: fullConfig.topMargin,
+          balanceTolerance: fullConfig.balanceTolerance ?? 0,
+          enableBalancing: true,
+        })
+      : layoutTwoColumns(remainingLines, {
+          pageHeight: fullConfig.pageHeight,
+          lineHeight: fullConfig.lineHeight,
+          topMargin: fullConfig.topMargin,
+        });
 
     // Convert to PageLayout format
     const page = createPageLayout(
