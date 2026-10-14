@@ -151,15 +151,14 @@ function detectBaseDirection(types: BidiType[]): BaseDirection {
  */
 function computeEmbeddingLevels(
   types: BidiType[],
-  baseDir: BaseDirection
+  _baseDir: BaseDirection
 ): number[] {
-  const baseLevel = baseDir === BaseDirection.RTL ? 1 : 0;
   const levels: number[] = [];
 
   for (let i = 0; i < types.length; i++) {
     const type = types[i];
     
-    if (baseDir === BaseDirection.RTL) {
+    if (_baseDir === BaseDirection.RTL) {
       // RTL base: Hebrew text at level 1, Latin at level 2
       if (type === BidiType.R) {
         levels.push(1);
@@ -213,7 +212,7 @@ function computeVisualOrder(levels: number[]): number[] {
     
     while (start < len) {
       // Skip characters below this level
-      while (start < len && levels[start] < level) {
+      while (start < len && (levels[start] ?? 0) < level) {
         start++;
       }
       
@@ -221,7 +220,7 @@ function computeVisualOrder(levels: number[]): number[] {
 
       // Find end of run at this level
       let end = start;
-      while (end < len && levels[end] >= level) {
+      while (end < len && (levels[end] ?? 0) >= level) {
         end++;
       }
 
@@ -230,7 +229,10 @@ function computeVisualOrder(levels: number[]): number[] {
         const segment = indices.slice(start, end);
         segment.reverse();
         for (let i = 0; i < segment.length; i++) {
-          indices[start + i] = segment[i];
+          const segmentValue = segment[i];
+          if (segmentValue !== undefined) {
+            indices[start + i] = segmentValue;
+          }
         }
       }
 
@@ -249,7 +251,7 @@ function computeVisualOrder(levels: number[]): number[] {
  * @returns Array in visual order
  */
 export function reorderToVisual<T>(items: T[], visualOrder: number[]): T[] {
-  return visualOrder.map(i => items[i]);
+  return visualOrder.map(i => items[i]).filter((item): item is T => item !== undefined);
 }
 
 /**

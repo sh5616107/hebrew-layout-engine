@@ -65,7 +65,8 @@ export function layoutTwoColumns(
   const {
     pageHeight,
     lineHeight,
-    columnGap = 14,
+    // columnGap is not used in this function but required for API consistency
+    // with getColumnXPosition and calculateColumnWidth which do use it
     topMargin = 0,
     bottomMargin = 0,
   } = options;
@@ -134,7 +135,7 @@ export function getColumnXPosition(
   columnWidth: number,
   leftMargin: number,
   rightMargin: number,
-  columnGap: number
+  _columnGap: number
 ): number {
   if (columnIndex === 0) {
     // Right column: starts from right side

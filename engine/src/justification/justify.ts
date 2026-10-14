@@ -69,12 +69,33 @@ export function justifyLine(
     };
   }
 
+  if (words.length === 0) {
+    // Empty line
+    return {
+      words: [],
+      wordSpaces: [],
+      actualWidth: 0,
+      isJustified: false,
+      quality: 1,
+    };
+  }
+
   if (words.length === 1) {
     // Single word - cannot justify
+    const firstWord = words[0];
+    if (!firstWord) {
+      return {
+        words: [],
+        wordSpaces: [],
+        actualWidth: 0,
+        isJustified: false,
+        quality: 1,
+      };
+    }
     return {
       words,
       wordSpaces: [],
-      actualWidth: words[0].width,
+      actualWidth: firstWord.width,
       isJustified: false,
       quality: 1,
     };
@@ -186,10 +207,12 @@ export function justifyLines(
     if (isLastLine) {
       // Last line: use natural spacing (no justification)
       const words = lines[i];
+      if (!words) continue;
+      
       const numGaps = Math.max(0, words.length - 1);
       const wordSpaces = Array(numGaps).fill(fullOptions.idealWordSpace);
       const totalWordWidth = words.reduce((sum, w) => sum + w.width, 0);
-      const actualWidth = totalWordWidth + numGaps * fullOptions.idealWordSpace;
+      const actualWidth = totalWordWidth + numGaps * (fullOptions.idealWordSpace ?? 3.5);
 
       results.push({
         words,
@@ -200,7 +223,10 @@ export function justifyLines(
       });
     } else {
       // Regular line: apply justification
-      results.push(justifyLine(lines[i], fullOptions));
+      const line = lines[i];
+      if (line) {
+        results.push(justifyLine(line, fullOptions));
+      }
     }
   }
 

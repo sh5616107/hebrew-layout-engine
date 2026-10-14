@@ -13,11 +13,7 @@ import * as hb from 'harfbuzzjs';
 // Find an available font
 function loadFont(): ArrayBuffer | null {
   const fontPaths = [
-    'C:\\Windows\\Fonts\\david.ttf',
-    'C:\\Windows\\Fonts\\DavidCLM-Medium.ttf',
-    'C:\\Windows\\Fonts\\arial.ttf',
-    '/System/Library/Fonts/Supplemental/Arial.ttf',
-    '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+    'fonts/SILEOT.ttf',
   ];
   
   for (const path of fontPaths) {

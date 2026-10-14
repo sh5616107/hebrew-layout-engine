@@ -26,10 +26,7 @@ describe('HarfBuzz Feasibility', () => {
   it('shapes simple Hebrew text', () => {
     // Try to load a font (we may not have one yet)
     const fontPaths = [
-      'C:\\Windows\\Fonts\\david.ttf',
-      'C:\\Windows\\Fonts\\arial.ttf',
-      '/System/Library/Fonts/Supplemental/Arial.ttf',
-      '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+      'fonts/SILEOT.ttf',
     ];
     
     let fontBuffer: ArrayBuffer | null = null;
@@ -86,8 +83,7 @@ describe('HarfBuzz Feasibility', () => {
   it('shapes Hebrew with nikud (critical test)', () => {
     // Find David or similar font with nikud support
     const fontPaths = [
-      'C:\\Windows\\Fonts\\david.ttf',
-      'C:\\Windows\\Fonts\\DavidCLM-Medium.ttf',
+      'fonts/SILEOT.ttf',
     ];
     
     let fontBuffer: ArrayBuffer | null = null;
@@ -158,8 +154,7 @@ describe('HarfBuzz Feasibility', () => {
 
   it('performance: shape 100 words', () => {
     const fontPaths = [
-      'C:\\Windows\\Fonts\\david.ttf',
-      'C:\\Windows\\Fonts\\arial.ttf',
+      'fonts/SILEOT.ttf',
     ];
     
     let fontBuffer: ArrayBuffer | null = null;

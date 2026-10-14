@@ -21,7 +21,8 @@ async function initHarfBuzz(): Promise<any> {
   try {
     // Try dynamic import
     const module = await import('harfbuzzjs');
-    hb = module.default || module;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    hb = (module as any).default || module;
     return hb;
   } catch (error) {
     throw new Error(`Failed to load HarfBuzz: ${error}`);

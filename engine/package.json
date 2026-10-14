@@ -1,7 +1,7 @@
 {
   "name": "@hebrew-layout/engine",
   "version": "0.1.0",
-  "description": "Hebrew book layout engine with precise column balancing",
+  "description": "Hebrew book layout engine (M0: infrastructure, M1: greedy pipeline, M2+: precise balancing)",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "test": "vitest",
+    "test": "npm run typecheck && npm run lint && vitest",
     "test:unit": "vitest run --dir tests/unit",
     "test:integration": "vitest run --dir tests/integration",
     "test:acceptance": "vitest run --dir tests/acceptance",

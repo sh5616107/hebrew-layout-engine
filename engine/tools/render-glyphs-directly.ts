@@ -14,7 +14,7 @@ async function renderGlyphsDirect() {
   console.log('=== Glyph-Level Rendering Test ===\n');
 
   // Load font
-  const fontPath = 'C:\\Windows\\Fonts\\david.ttf';
+  const fontPath = 'fonts/SILEOT.ttf';
   const fontBuffer = readFileSync(fontPath).buffer;
   
   // Shape with HarfBuzz

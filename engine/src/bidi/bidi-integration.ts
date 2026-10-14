@@ -5,7 +5,7 @@
  */
 
 import type { ShapedWord } from '../line-breaking/greedy-breaker';
-import { resolveBiDi, reorderToVisual, BaseDirection } from './bidi-resolver';
+import { resolveBiDi, BaseDirection } from './bidi-resolver';
 
 /**
  * Apply BiDi reordering to an array of shaped words.
@@ -52,13 +52,18 @@ export function applyBiDiToWords(
   // (Full UAX #9 would reorder at character level within words)
   
   // Find which words are RTL vs LTR based on their character types
-  const wordDirections = words.map((word, i) => {
-    const { start, end } = wordBoundaries[i];
-    const wordLevels = bidiResult.levels.slice(start, Math.min(end, bidiResult.levels.length));
-    
-    // Word direction is determined by majority of its characters
-    const avgLevel = wordLevels.reduce((sum, l) => sum + l, 0) / wordLevels.length;
-    return avgLevel >= 1 ? 'RTL' : 'LTR';
+  // (unused in current simplified implementation, but kept for future use)
+  words.forEach((_, i) => {
+    const boundary = wordBoundaries[i];
+    if (boundary) {
+      const { start, end } = boundary;
+      const wordLevels = bidiResult.levels.slice(start, Math.min(end, bidiResult.levels.length));
+      
+      // Word direction is determined by majority of its characters
+      const avgLevel = wordLevels.reduce((sum, l) => sum + l, 0) / wordLevels.length;
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      avgLevel >= 1 ? 'RTL' : 'LTR';
+    }
   });
 
   // In RTL base direction, reverse the word order
@@ -108,8 +113,11 @@ export function applyBiDiWithMetadata(
     charIndex = end + 1;
   }
 
-  const wordDirections = words.map((word, i) => {
-    const { start, end } = wordBoundaries[i];
+  const wordDirections = words.map((_, i) => {
+    const boundary = wordBoundaries[i];
+    if (!boundary) return 'LTR' as const;
+    
+    const { start, end } = boundary;
     const wordLevels = bidiResult.levels.slice(start, Math.min(end, bidiResult.levels.length));
     
     // Determine direction by checking if all levels are even (LTR) or any odd (RTL)

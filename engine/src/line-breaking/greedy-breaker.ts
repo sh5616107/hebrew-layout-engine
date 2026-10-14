@@ -65,6 +65,8 @@ export function breakLines(
 
   for (let i = 0; i < words.length; i++) {
     const word = words[i];
+    if (!word) continue;
+    
     const isFirstWordInLine = currentLine.length === 0;
     const spaceWidth = isFirstWordInLine ? 0 : wordSpacing;
     const widthWithWord = currentWidth + spaceWidth + word.width;
@@ -81,9 +83,12 @@ export function breakLines(
       // Break word at glyph boundaries
       const broken = breakWordAtGlyphBoundaries(word, maxWidth);
       for (let j = 0; j < broken.length; j++) {
-        lines.push([broken[j]]);
-        lineWidths.push(broken[j].width);
-        cleanBreaks.push(j === broken.length - 1); // Only last fragment is clean
+        const fragment = broken[j];
+        if (fragment) {
+          lines.push([fragment]);
+          lineWidths.push(fragment.width);
+          cleanBreaks.push(j === broken.length - 1); // Only last fragment is clean
+        }
       }
       currentLine = [];
       currentWidth = 0;
@@ -107,9 +112,12 @@ export function breakLines(
         // Break word at glyph boundaries
         const broken = breakWordAtGlyphBoundaries(word, maxWidth);
         for (let j = 0; j < broken.length; j++) {
-          lines.push([broken[j]]);
-          lineWidths.push(broken[j].width);
-          cleanBreaks.push(j === broken.length - 1); // Only last fragment is clean
+          const fragment = broken[j];
+          if (fragment) {
+            lines.push([fragment]);
+            lineWidths.push(fragment.width);
+            cleanBreaks.push(j === broken.length - 1); // Only last fragment is clean
+          }
         }
         currentLine = [];
         currentWidth = 0;
@@ -151,7 +159,11 @@ function breakWordAtGlyphBoundaries(
   let startGlyphIndex = 0;
 
   for (let i = 0; i < word.glyphIds.length; i++) {
-    const glyphWidth = word.advances[i];
+    const glyphId = word.glyphIds[i];
+    const glyphAdvance = word.advances[i];
+    if (glyphId === undefined || glyphAdvance === undefined) continue;
+    
+    const glyphWidth = glyphAdvance;
     const wouldExceed = currentWidth + glyphWidth > maxWidth;
     
     // If adding this glyph would exceed maxWidth AND we have glyphs accumulated, flush first
@@ -176,8 +188,8 @@ function breakWordAtGlyphBoundaries(
     }
 
     // Now add current glyph (to new fragment if we just flushed)
-    currentGlyphIds.push(word.glyphIds[i]);
-    currentAdvances.push(word.advances[i]);
+    currentGlyphIds.push(glyphId);
+    currentAdvances.push(glyphAdvance);
     currentWidth += glyphWidth;
   }
 

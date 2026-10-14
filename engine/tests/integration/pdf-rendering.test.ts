@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 describe('PDF Rendering Integration', () => {
-  const fontPath = 'C:\\Windows\\Fonts\\david.ttf';
+  const fontPath = 'fonts/SILEOT.ttf';
   const outputDir = path.join(__dirname, '..', '..', 'out');
 
   beforeAll(() => {

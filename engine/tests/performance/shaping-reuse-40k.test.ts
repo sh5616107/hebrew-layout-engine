@@ -17,7 +17,6 @@ describe('Shaping Performance with Reuse (40k words)', () => {
     // Load font once
     const fontPaths = [
       'fonts/SILEOT.ttf', // Ezra SIL
-      'C:\\Windows\\Fonts\\david.ttf',
     ];
     
     let fontBuffer: ArrayBuffer | null = null;

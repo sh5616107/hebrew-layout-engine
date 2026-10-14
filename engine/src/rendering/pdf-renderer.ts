@@ -10,11 +10,11 @@
  */
 
 import PDFDocument from 'pdfkit';
-import type { LayoutResult, PageLayout, LineContent } from '../core/layout-engine';
+import type { LayoutResult, LineContent } from '../core/layout-engine';
 import type { ShapedWord } from '../line-breaking/greedy-breaker';
 
 export interface PDFRenderOptions {
-  /** Path to font file (e.g., 'C:\\Windows\\Fonts\\david.ttf') */
+  /** Path to font file (relative to project root, e.g., 'fonts/SILEOT.ttf') */
   fontPath: string;
   /** Font size in points */
   fontSize: number;
@@ -53,6 +53,7 @@ export async function renderToPDF(
   // Render each page
   for (let i = 0; i < layout.pages.length; i++) {
     const page = layout.pages[i];
+    if (!page) continue;
 
     if (i > 0) {
       doc.addPage();
@@ -67,6 +68,7 @@ export async function renderToPDF(
 
   // Finalize and save
   return new Promise((resolve, reject) => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const stream = require('fs').createWriteStream(outputPath);
     doc.pipe(stream);
     doc.end();
@@ -103,6 +105,7 @@ function renderLine(
   // RTL: render words from right to left
   for (let i = 0; i < line.words.length; i++) {
     const word = line.words[i];
+    if (!word) continue;
 
     // Move left by word width (RTL)
     currentX -= word.width;

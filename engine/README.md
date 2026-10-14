@@ -1,10 +1,14 @@
 # Hebrew Book Layout Engine
 
-Professional typesetting engine for Hebrew religious books with precise column balancing.
+Professional typesetting engine for Hebrew religious books.
 
-## Status: M0 - Infrastructure Setup ✅ 90% Complete
+## Status: M1.1 BiDi + M2 Justification ✅ Complete
 
-Currently at Milestone 0: project structure, type definitions, and configuration scaffold.
+**M0 Infrastructure (✅):** TypeScript, types, config, HarfBuzz, PDFKit  
+**M1.0 Greedy Pipeline (✅):** Line breaking, two-column layout, PDF rendering  
+**M1.1 BiDi Support (✅):** Custom UAX #9 implementation  
+**M2 Justification (✅):** Inter-word spacing adjustment  
+**M3 Column Balancing:** Not yet implemented (planned)
 
 **Implemented:**
 - ✅ TypeScript project setup (tsconfig, vitest, tsup, eslint)
@@ -43,19 +47,22 @@ src/
 └── diagnostics/    # Diagnostic codes and waiver management
 ```
 
-## Specification
+## Architecture
 
 This engine implements the Hebrew Book Layout Specification v0.5 (October 2026).
 
-Key features:
-- **Precise column balancing**: Columns must end at same baseline (`bottomDelta = 0`)
+**Planned features (M3+):**
+- **Precise column balancing**: Columns will end at same baseline (`bottomDelta = 0`)
 - **Page policies**: Different balance requirements for body, last page, openings, etc.
 - **Opening window**: Empty space below first word (unique feature)
-- **RTL with nikud and teamim**: Full Hebrew diacritics support
-- **Footnotes**: Full-width at page bottom
+
+**Current features:**
+- **RTL with nikud and teamim**: Full Hebrew diacritics support via HarfBuzz
+- **BiDi text**: Mixed Hebrew/Latin with visual reordering
+- **Justification**: Inter-word spacing adjustment within limits
+- **Footnotes**: Type definitions ready (rendering not yet implemented)
 - **Deterministic**: Same input always produces same output
 - **Measurable**: All coordinates in mpt (milli-points, integers)
-- **Diagnostic**: Every failure explicitly reported with code and message
 
 ## Usage
 
@@ -74,7 +81,7 @@ const result: LayoutResult = layout(doc);
 
 if (result.status === 'valid') {
   console.log(`✓ ${result.pages.length} pages`);
-  console.log(`✓ ${result.metrics.balancedPages} balanced`);
+  // Note: balancing not yet implemented - metrics.balancedPages always 0 in M1/M2
 } else {
   console.error('Layout failed:');
   result.diagnostics.forEach(d => {

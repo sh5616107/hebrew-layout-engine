@@ -36,7 +36,7 @@ import { DEFAULT_ENGINE_CONFIG, hashConfig } from './core/config.js';
  * ```
  */
 export function layout(
-  document: Document,
+  _document: Document,
   config: EngineConfig = DEFAULT_ENGINE_CONFIG
 ): LayoutResult {
   const startTime = performance.now();

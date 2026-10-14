@@ -22,7 +22,7 @@ function mockShapedWord(text: string, widthPt: number): ShapedWord {
 }
 
 describe('M1.0 Full Pipeline E2E', () => {
-  const fontPath = 'C:\\Windows\\Fonts\\david.ttf';
+  const fontPath = 'fonts/SILEOT.ttf';
   const outputDir = path.join(__dirname, '..', '..', 'out', 'e2e');
 
   it('should process complete Hebrew document end-to-end', async () => {
