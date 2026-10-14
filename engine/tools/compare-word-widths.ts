@@ -84,7 +84,7 @@ function measureWithPDFKit(text: string, fontSize: number): number {
   return width;
 }
 
-async function compareCorpus() {
+async function compareCorpus(): Promise<void> {
   console.log('Loading corpus...');
   const words = await loadCorpus();
   console.log(`Loaded ${words.length} words\n`);

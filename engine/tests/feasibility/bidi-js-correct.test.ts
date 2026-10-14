@@ -6,12 +6,27 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 
+// Type definition for bidi-js (no official types available)
+interface BidiFactory {
+  default: () => BidiInstance;
+}
+
+interface BidiInstance {
+  getEmbeddingLevels(text: string, direction?: 'ltr' | 'rtl'): EmbeddingLevels;
+  getReorderSegments(text: string, levels: EmbeddingLevels): number[][];
+  getReorderedString(text: string): string;
+}
+
+interface EmbeddingLevels {
+  levels: Uint8Array;
+  paragraphs: Array<{ start: number; end: number; level: number }>;
+}
+
 describe('bidi-js - Corrected API', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let bidiFactory: any;
+  let bidiFactory: BidiFactory;
 
   beforeAll(async () => {
-    bidiFactory = await import('bidi-js');
+    bidiFactory = await import('bidi-js') as BidiFactory;
   });
 
   it('should return {levels, paragraphs} from getEmbeddingLevels', () => {

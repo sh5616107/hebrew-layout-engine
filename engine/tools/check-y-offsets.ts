@@ -65,7 +65,9 @@ function shapeText(text: string): ShapingResult {
   return { text, glyphs, features };
 }
 
-function generateReport() {
+// Unused function - kept for reference
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _generateReport(): void {
   console.log('='.repeat(80));
   console.log('בדיקת Y-offset ו-RTL');
   console.log('='.repeat(80));

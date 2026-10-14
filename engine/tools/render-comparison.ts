@@ -110,7 +110,6 @@ for (let i = 0; i < glyphInfos.length; i++) {
   
   // Convert HarfBuzz units to points
   const xAdvance = pos.xAdvance * scale;
-  const yAdvance = pos.yAdvance * scale;
   const xOffset = pos.xOffset * scale;
   const yOffset = pos.yOffset * scale;
   

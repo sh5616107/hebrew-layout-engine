@@ -131,7 +131,7 @@ function measureAlternativeB(text: string, fontSize: number): number {
   return measureWithHarfBuzz(text, fontSize);
 }
 
-async function compareAlternatives() {
+async function compareAlternatives(): Promise<void> {
   console.log('='.repeat(80));
   console.log('RENDERING ALTERNATIVES COMPARISON');
   console.log('='.repeat(80));

@@ -34,7 +34,6 @@ buffer.guessSegmentProperties();
 hb.shape(font, buffer);
 
 const infos = buffer.getGlyphInfos();
-const positions = buffer.getGlyphPositions();
 
 console.log(`Shaped ${infos.length} glyphs from text: "${text}"`);
 
