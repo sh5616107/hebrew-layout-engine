@@ -72,12 +72,15 @@ function generateReport() {
   console.log();
   
   const testCases = [
-    { label: 'Plain', text: 'בראשית' },
-    { label: 'Nikud above (segol)', text: 'בֶּרֶשֶת' },
-    { label: 'Nikud below (shva)', text: 'בְּרְאְשִׁית' },
+    { label: 'Plain (no nikud)', text: 'בראשית' },
+    { label: 'Nikud BELOW - Shva (בְּ)', text: 'בְּרְאְשִׁית' },
+    { label: 'Nikud BELOW - Segol (בֶּ)', text: 'בֶּרֶשֶת' },
+    { label: 'Nikud ABOVE - Holam (בֹּ)', text: 'בֹּקֶר' },
+    { label: 'Nikud ABOVE - Shin dot (שׁ/שׂ)', text: 'שָׁמַיִם שָׂדֶה' },
     { label: 'Mixed nikud', text: 'בְּרֵאשִׁית' },
-    { label: 'Te\'amim above (etnachta)', text: 'בָּרָא֑' },
-    { label: 'Te\'amim below (merkha)', text: 'בָּרָ֥א' },
+    { label: 'Te\'amim ABOVE - Zaqef', text: 'בָּרָא֔' },
+    { label: 'Te\'amim BELOW - Etnachta (֑)', text: 'אֱלֹהִ֑ים' },
+    { label: 'Te\'amim BELOW - Merkha', text: 'בָּרָ֥א' },
     { label: 'Complex (Gen 1:1)', text: 'בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים' },
   ];
   
@@ -141,31 +144,30 @@ function generateReport() {
   
   doc.moveDown(2);
   
-  // Test cases
+  // Test cases in RTL visual order (right to left)
   for (const testCase of testCases) {
     const result = shapeText(testCase.text);
     
-    doc.fontSize(12).font('Helvetica-Bold').text(testCase.label, { continued: false });
-    doc.fontSize(10).font('Helvetica').text(`"${testCase.text}"`, { continued: false });
+    doc.fontSize(12).font('Helvetica-Bold').text(testCase.label, { continued: false, align: 'left' });
     
     const hasYOffset = result.glyphs.some(g => g.yOffset !== 0);
     const hasXOffset = result.glyphs.some(g => g.xOffset !== 0);
     
     doc.fontSize(9).font('Helvetica')
-      .text(`Glyphs: ${result.glyphs.length}, Y-offset: ${hasYOffset ? 'YES' : 'NO'}, X-offset: ${hasXOffset ? 'YES' : 'NO'}`, 
-        { continued: false });
+      .text(`Glyphs: ${result.glyphs.length} | Y-offset: ${hasYOffset ? 'YES' : 'NO'} | X-offset: ${hasXOffset ? 'YES' : 'NO'}`, 
+        { continued: false, align: 'left' });
     
-    doc.moveDown(0.5);
+    doc.moveDown(0.3);
     
-    // Render at large size for visual inspection
-    doc.fontSize(36).font('Ezra').text(testCase.text, { align: 'right' });
+    // Render at large size for visual inspection (RTL alignment)
+    doc.fontSize(48).font('Ezra').text(testCase.text, { align: 'right' });
     
-    doc.moveDown(1.5);
+    doc.moveDown(1);
     
     // Add grid line for baseline reference
     const y = doc.y;
     doc.moveTo(50, y).lineTo(545, y).stroke('#cccccc');
-    doc.moveDown(0.5);
+    doc.moveDown(0.8);
   }
   
   doc.end();
