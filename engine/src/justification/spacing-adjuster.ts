@@ -52,18 +52,20 @@ export function generateAlternativeBreaks(
   const spacingsToTry: number[] = [];
   
   if (targetLineDelta < 0) {
-    // Need fewer lines: try tighter spacing (90% down to 80%)
-    for (let pct = 90; pct >= spacingConfig.allowed.min; pct -= 5) {
+    // Need fewer lines: try tighter spacing (preferred.min down to allowed.min)
+    for (let pct = spacingConfig.preferred.min; pct >= spacingConfig.allowed.min; pct -= 5) {
       spacingsToTry.push(pct);
     }
   } else if (targetLineDelta > 0) {
-    // Need more lines: try looser spacing (115% up to 130%)
-    for (let pct = 115; pct <= spacingConfig.allowed.max; pct += 5) {
+    // Need more lines: try looser spacing (preferred.max up to allowed.max)
+    for (let pct = spacingConfig.preferred.max; pct <= spacingConfig.allowed.max; pct += 5) {
       spacingsToTry.push(pct);
     }
   } else {
     // Delta is 0, try both directions slightly
-    spacingsToTry.push(95, 110);
+    const midPreferredTight = Math.round((spacingConfig.preferred.min + 100) / 2);
+    const midPreferredLoose = Math.round((100 + spacingConfig.preferred.max) / 2);
+    spacingsToTry.push(midPreferredTight, midPreferredLoose);
   }
 
   // Generate alternatives (mock implementation)
@@ -86,8 +88,8 @@ export function generateAlternativeBreaks(
       wordSpacingPercent: spacing,
       quality: calculateQuality(spacing, spacingConfig),
       penaltyInfo: {
-        tightLines: spacing < 90 ? 1 : 0,
-        looseLines: spacing > 115 ? 1 : 0,
+        tightLines: spacing < spacingConfig.preferred.min ? 1 : 0,
+        looseLines: spacing > spacingConfig.preferred.max ? 1 : 0,
         rivers: 0,
       },
     };

@@ -110,11 +110,14 @@ export function layoutSection(
 
     // Emit warning for unbalanced fill page with delta > lineHeight
     if (page.bottomDelta > config.lineHeight) {
+      // Use first paragraph ID on page as stable key anchor
+      const anchorParagraphId = page.paragraphs[0]?.id || 'unknown';
       diagnostics.push({
         code: 'UNBALANCED_FILL_PAGE',
         severity: 'warning',
         sectionId: section.id,
-        stableKey: `${section.id}:page-${i}:UNBALANCED_FILL_PAGE`,
+        paragraphId: anchorParagraphId,
+        stableKey: `${section.id}:${anchorParagraphId}:UNBALANCED_FILL_PAGE`,
         message: `Fill page ${i} has unbalanced columns (delta: ${page.bottomDelta.toFixed(1)} mpt)`,
         pageIndex: i,
       });
@@ -421,8 +424,10 @@ function stageC_ParagraphSpacing(
   const delta = page.rightHeight - page.leftHeight;
   const shorterColumn = delta > 0 ? 'left' : 'right';
 
-  // Try adding 1 or 2 lineHeights to shorter column
-  const maxAddition = 2; // proposal-for-approval (2× default)
+  // Try adding lineHeights to shorter column
+  // ADR-007: "עד פי 2 מברירת המחדל" = total up to 2× default spacing
+  // If default is 1L, we can add up to 1L more (total = 2L)
+  const maxAddition = 1; // proposal-for-approval (adding 1L to 1L default = 2L total)
   
   for (let multiplier = 1; multiplier <= maxAddition; multiplier++) {
     const addition = multiplier; // In line units
@@ -499,13 +504,13 @@ function stageD_MoveLinesBetweenPages(
     break;
   }
 
-  // Record that we tried moving lines
+  // Record that we tried moving lines (section-level diagnostic, not page-specific)
   diagnostics.push({
     code: 'LINES_MOVED_BETWEEN_PAGES',
     severity: 'info',
     sectionId: section.id,
-    stableKey: `${section.id}:page-${pageIndex}:LINES_MOVED_BETWEEN_PAGES`,
-    message: `Attempted ${attempts} line movements`,
+    stableKey: `${section.id}:section:LINES_MOVED_BETWEEN_PAGES`,
+    message: `Attempted ${attempts} line movements for balancing`,
     pageIndex,
   });
 
