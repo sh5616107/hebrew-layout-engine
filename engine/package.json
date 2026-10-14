@@ -47,6 +47,7 @@
     "vitest": "^1.6.1"
   },
   "dependencies": {
+    "bidi-js": "^1.1.0",
     "harfbuzzjs": "^1.6.3",
     "pdfkit": "^0.15.0"
   },
