@@ -30,6 +30,15 @@ export interface TwoColumnLayout {
   fitsOnPage: boolean;
   /** Lines that didn't fit (overflow) */
   overflow: ShapedWord[][];
+  /** Balance quality metrics */
+  balanceInfo?: {
+    /** Difference in bottom position (mpt) - 0 is perfect */
+    bottomDelta: number;
+    /** Whether columns are balanced within tolerance */
+    isBalanced: boolean;
+    /** Balance quality score (0-1, higher is better) */
+    quality: number;
+  };
 }
 
 export interface TwoColumnLayoutOptions {
@@ -43,6 +52,10 @@ export interface TwoColumnLayoutOptions {
   topMargin?: number;
   /** Bottom margin in points (default: 0) */
   bottomMargin?: number;
+  /** Enable column balancing (default: false) */
+  enableBalancing?: boolean;
+  /** Balance tolerance in points (default: 0 for exact balance) */
+  balanceTolerance?: number;
 }
 
 /**
@@ -164,4 +177,214 @@ export function calculateColumnWidth(
 ): number {
   const availableWidth = pageWidth - leftMargin - rightMargin - columnGap;
   return availableWidth / 2;
+}
+
+/**
+ * Balance two columns to end at approximately the same height.
+ * 
+ * Simple M2 algorithm:
+ * - Try different split points near the middle
+ * - Choose the split that minimizes height difference
+ * - Within tolerance threshold (default: 1 line height)
+ * 
+ * @param lines All lines to distribute
+ * @param options Layout configuration with balancing enabled
+ * @returns Balanced two-column layout
+ */
+export function layoutTwoColumnsBalanced(
+  lines: ShapedWord[][],
+  options: TwoColumnLayoutOptions & { enableBalancing: true }
+): TwoColumnLayout {
+  const {
+    pageHeight,
+    lineHeight,
+    columnGap = 14,
+    topMargin = 0,
+    bottomMargin = 0, // Not used in balancing calculation but part of options
+    balanceTolerance = lineHeight, // Default: allow 1 line difference
+  } = options;
+
+  void columnGap;
+  void bottomMargin; // Mark as intentionally unused
+
+  const totalLines = lines.length;
+  
+  // If too few lines, use balanced split
+  if (totalLines === 0) {
+    return {
+      rightColumn: { lines: [], lineYPositions: [], usedHeight: 0 },
+      leftColumn: { lines: [], lineYPositions: [], usedHeight: 0 },
+      pageHeight,
+      fitsOnPage: true,
+      overflow: [],
+      balanceInfo: {
+        bottomDelta: 0,
+        isBalanced: true,
+        quality: 1,
+      },
+    };
+  }
+  
+  if (totalLines === 1) {
+    const line = lines[0];
+    if (!line) {
+      return {
+        rightColumn: { lines: [], lineYPositions: [], usedHeight: 0 },
+        leftColumn: { lines: [], lineYPositions: [], usedHeight: 0 },
+        pageHeight,
+        fitsOnPage: true,
+        overflow: [],
+        balanceInfo: {
+          bottomDelta: 0,
+          isBalanced: true,
+          quality: 1,
+        },
+      };
+    }
+    
+    const rightColumn: Column = {
+      lines: [line],
+      lineYPositions: [topMargin],
+      usedHeight: lineHeight,
+    };
+    return {
+      rightColumn,
+      leftColumn: { lines: [], lineYPositions: [], usedHeight: 0 },
+      pageHeight,
+      fitsOnPage: true,
+      overflow: [],
+      balanceInfo: {
+        bottomDelta: lineHeight,
+        isBalanced: lineHeight <= balanceTolerance,
+        quality: Math.max(0, 1 - lineHeight / balanceTolerance),
+      },
+    };
+  }
+  
+  if (totalLines === 2) {
+    // Perfect 1+1 split
+    const line0 = lines[0];
+    const line1 = lines[1];
+    if (!line0 || !line1) {
+      return {
+        rightColumn: { lines: [], lineYPositions: [], usedHeight: 0 },
+        leftColumn: { lines: [], lineYPositions: [], usedHeight: 0 },
+        pageHeight,
+        fitsOnPage: true,
+        overflow: [],
+        balanceInfo: {
+          bottomDelta: 0,
+          isBalanced: true,
+          quality: 1,
+        },
+      };
+    }
+    
+    const rightColumn: Column = {
+      lines: [line0],
+      lineYPositions: [topMargin],
+      usedHeight: lineHeight,
+    };
+    const leftColumn: Column = {
+      lines: [line1],
+      lineYPositions: [topMargin],
+      usedHeight: lineHeight,
+    };
+    return {
+      rightColumn,
+      leftColumn,
+      pageHeight,
+      fitsOnPage: true,
+      overflow: [],
+      balanceInfo: {
+        bottomDelta: 0,
+        isBalanced: true,
+        quality: 1,
+      },
+    };
+  }
+
+  // Try different split points around the middle
+  // For Hebrew RTL, prefer MORE lines in right column when uneven
+  const middle = Math.ceil(totalLines / 2); // Use ceil for RTL preference
+  const searchRange = Math.min(3, Math.floor(totalLines / 3)); // Search ±3 lines from middle
+  
+  let bestSplit = middle;
+  let bestDelta = Infinity;
+  
+  for (let offset = -searchRange; offset <= searchRange; offset++) {
+    const splitPoint = middle + offset;
+    
+    // Skip invalid splits
+    if (splitPoint < 0 || splitPoint > totalLines) continue;
+    
+    // Handle edge case: if splitPoint = totalLines, all lines go to right
+    if (splitPoint === totalLines) {
+      const rightHeight = totalLines * lineHeight;
+      const leftHeight = 0;
+      const delta = Math.abs(rightHeight - leftHeight);
+      
+      if (delta < bestDelta) {
+        bestDelta = delta;
+        bestSplit = splitPoint;
+      }
+      continue;
+    }
+    
+    const rightHeight = splitPoint * lineHeight;
+    const leftHeight = (totalLines - splitPoint) * lineHeight;
+    const delta = Math.abs(rightHeight - leftHeight);
+    
+    // Prefer larger right column when deltas are equal (RTL convention)
+    if (delta < bestDelta || (delta === bestDelta && splitPoint > bestSplit)) {
+      bestDelta = delta;
+      bestSplit = splitPoint;
+    }
+    
+    // Stop if we found perfect balance
+    if (delta === 0) break;
+  }
+  
+  // Create layout with best split
+  const rightColumnLines = lines.slice(0, bestSplit);
+  const leftColumnLines = lines.slice(bestSplit);
+  
+  const rightYPositions: number[] = [];
+  for (let i = 0; i < rightColumnLines.length; i++) {
+    rightYPositions.push(topMargin + i * lineHeight);
+  }
+  
+  const leftYPositions: number[] = [];
+  for (let i = 0; i < leftColumnLines.length; i++) {
+    leftYPositions.push(topMargin + i * lineHeight);
+  }
+  
+  const rightColumn: Column = {
+    lines: rightColumnLines,
+    lineYPositions: rightYPositions,
+    usedHeight: rightColumnLines.length * lineHeight,
+  };
+  
+  const leftColumn: Column = {
+    lines: leftColumnLines,
+    lineYPositions: leftYPositions,
+    usedHeight: leftColumnLines.length * lineHeight,
+  };
+  
+  const bottomDelta = Math.abs(rightColumn.usedHeight - leftColumn.usedHeight);
+  const isBalanced = bottomDelta <= balanceTolerance;
+  const quality = bottomDelta === 0 ? 1 : Math.max(0, 1 - bottomDelta / lineHeight);
+  
+  return {
+    rightColumn,
+    leftColumn,
+    pageHeight,
+    fitsOnPage: true,
+    overflow: [],
+    balanceInfo: {
+      bottomDelta,
+      isBalanced,
+      quality,
+    },
+  };
 }
