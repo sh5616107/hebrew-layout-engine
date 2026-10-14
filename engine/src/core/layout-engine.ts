@@ -7,6 +7,8 @@
 
 import type { ShapedWord } from '../line-breaking/greedy-breaker';
 import type { TwoColumnLayout } from '../layout/two-column-layout';
+import type { LayoutSection } from './types.js';
+import type { SectionBalancingConfig, WordSpacingRangeConfig } from './config.js';
 import { breakLines } from '../line-breaking/greedy-breaker';
 import { 
   layoutTwoColumns, 
@@ -14,6 +16,7 @@ import {
   calculateColumnWidth, 
   getColumnXPosition 
 } from '../layout/two-column-layout';
+import { layoutSection, type SectionLayoutConfig } from '../layout/section-balancer.js';
 
 // Re-export ShapedWord for convenience
 export type { ShapedWord };
@@ -238,5 +241,123 @@ function createPageLayout(
     pageNumber,
     rightColumn,
     leftColumn,
+  };
+}
+
+/**
+ * Layout document with section-level balancing (M3).
+ * 
+ * This is the new API that supports section-level column balancing
+ * with the 4-stage adaptation ladder from ADR-007.
+ * 
+ * @param sections - Array of sections to layout
+ * @param config - Layout configuration (extended with section balancing)
+ * @returns Layout result with section-aware balancing
+ */
+export function layoutDocumentWithSections(
+  sections: LayoutSection[],
+  config: Partial<LayoutConfig> & {
+    sectionBalancing?: SectionBalancingConfig;
+    wordSpacing?: WordSpacingRangeConfig;
+  } = {}
+): LayoutResult & { sectionDiagnostics?: import('./types.js').SectionDiagnostic[] } {
+  const fullConfig: LayoutConfig = { ...DEFAULT_CONFIG, ...config };
+
+  // Calculate column width
+  const columnWidth = calculateColumnWidth(
+    fullConfig.pageWidth,
+    fullConfig.leftMargin,
+    fullConfig.rightMargin,
+    fullConfig.columnGap
+  );
+
+  // Calculate max lines per column
+  const availableHeight = fullConfig.pageHeight - fullConfig.topMargin - fullConfig.bottomMargin;
+  const maxLinesPerColumn = Math.floor(availableHeight / fullConfig.lineHeight);
+
+  const sectionLayoutConfig: SectionLayoutConfig = {
+    maxLinesPerColumn,
+    lineHeight: fullConfig.lineHeight,
+    sectionBalancing: config.sectionBalancing ?? {
+      maxAttempts: 100, // proposal-for-approval
+      lookAheadPages: 5,
+      lookBackPages: 1,
+      minParagraphLinesToSplit: 4, // proposal-for-approval
+      widows: 2,
+      orphans: 2,
+      balanceTolerance: fullConfig.balanceTolerance ?? 0,
+    },
+    wordSpacing: config.wordSpacing ?? {
+      preferred: { min: 90, max: 115 }, // proposal-for-approval
+      allowed: { min: 80, max: 130 }, // proposal-for-approval
+    },
+  };
+
+  const pages: PageLayout[] = [];
+  const allSectionDiagnostics: import('./types.js').SectionDiagnostic[] = [];
+  let globalPageNumber = 1;
+
+  // Layout each section
+  for (const section of sections) {
+    const sectionResult = layoutSection(section, sectionLayoutConfig);
+    allSectionDiagnostics.push(...sectionResult.diagnostics);
+
+    // Convert section pages to PageLayout format
+    for (const sectionPage of sectionResult.pages) {
+      const rightX = getColumnXPosition(
+        0,
+        fullConfig.pageWidth,
+        columnWidth,
+        fullConfig.leftMargin,
+        fullConfig.rightMargin,
+        fullConfig.columnGap
+      );
+
+      const leftX = getColumnXPosition(
+        1,
+        fullConfig.pageWidth,
+        columnWidth,
+        fullConfig.leftMargin,
+        fullConfig.rightMargin,
+        fullConfig.columnGap
+      );
+
+      // Convert ShapedRun[][] to ShapedWord[][] (mock conversion for now)
+      const rightWords: ShapedWord[][] = sectionPage.rightColumn.map(() => []);
+      const leftWords: ShapedWord[][] = sectionPage.leftColumn.map(() => []);
+
+      const rightColumn: ColumnContent = {
+        x: rightX,
+        width: columnWidth,
+        lines: rightWords.map((words, i) => ({
+          y: fullConfig.topMargin + i * fullConfig.lineHeight,
+          words,
+          x: rightX + columnWidth,
+        })),
+      };
+
+      const leftColumn: ColumnContent = {
+        x: leftX,
+        width: columnWidth,
+        lines: leftWords.map((words, i) => ({
+          y: fullConfig.topMargin + i * fullConfig.lineHeight,
+          words,
+          x: leftX + columnWidth,
+        })),
+      };
+
+      pages.push({
+        pageNumber: globalPageNumber++,
+        rightColumn,
+        leftColumn,
+      });
+    }
+  }
+
+  return {
+    pages,
+    pageCount: pages.length,
+    config: fullConfig,
+    sectionDiagnostics: allSectionDiagnostics,
   };
 }

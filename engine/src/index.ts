@@ -13,6 +13,30 @@ import type { Document, LayoutResult } from './core/types.js';
 import type { EngineConfig } from './core/config.js';
 import { DEFAULT_ENGINE_CONFIG, hashConfig } from './core/config.js';
 
+// Export section balancing types and functions
+export type {
+  LayoutParagraph,
+  LayoutSection,
+  ParagraphStyle,
+  ParagraphOpening,
+  LineBreakAlternative,
+  FootnoteRef,
+  FootnoteNote,
+  SectionDiagnostic,
+} from './core/types.js';
+
+export type {
+  SectionBalancingConfig,
+  WordSpacingRangeConfig,
+} from './core/config.js';
+
+export {
+  DEFAULT_SECTION_BALANCING_CONFIG,
+  DEFAULT_WORD_SPACING_CONFIG,
+} from './core/config.js';
+
+export { layoutDocumentWithSections } from './core/layout-engine.js';
+
 /**
  * Main layout function
  * 
