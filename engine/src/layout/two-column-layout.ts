@@ -65,11 +65,16 @@ export function layoutTwoColumns(
   const {
     pageHeight,
     lineHeight,
-    // columnGap is not used in this function but required for API consistency
-    // with getColumnXPosition and calculateColumnWidth which do use it
+    columnGap = 14, // Used indirectly via external callers (getColumnXPosition, calculateColumnWidth)
     topMargin = 0,
     bottomMargin = 0,
   } = options;
+
+  // Note: columnGap is stored but not used directly in this function
+  // because layoutTwoColumns only handles vertical distribution.
+  // Horizontal positioning (which needs columnGap) is done by callers
+  // using getColumnXPosition and calculateColumnWidth.
+  void columnGap; // Mark as intentionally unused in this scope
 
   const availableHeight = pageHeight - topMargin - bottomMargin;
   const maxLinesPerColumn = Math.floor(availableHeight / lineHeight);
