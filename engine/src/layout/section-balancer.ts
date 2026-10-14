@@ -134,37 +134,30 @@ function initialFill(
   const pages: SectionPage[] = [];
   const linesPerPage = config.maxLinesPerColumn * 2;
 
-  let currentPageLines: ShapedRun[][] = [];
-  let currentPageParagraphs: LayoutParagraph[] = [];
+  // Collect all lines from all paragraphs
+  const allLines: ShapedRun[][] = [];
+  const paragraphMap = new Map<number, LayoutParagraph>(); // line index -> paragraph
 
+  let lineIndex = 0;
   for (const paragraph of section.paragraphs) {
     for (const line of paragraph.lines) {
-      currentPageLines.push(line);
-
-      // If page is full, create new page
-      if (currentPageLines.length >= linesPerPage) {
-        pages.push(createPageFromLines(
-          pages.length,
-          currentPageLines.slice(0, linesPerPage),
-          currentPageParagraphs,
-          config
-        ));
-        currentPageLines = currentPageLines.slice(linesPerPage);
-        currentPageParagraphs = [];
-      }
-    }
-
-    if (currentPageLines.length > 0 && !currentPageParagraphs.includes(paragraph)) {
-      currentPageParagraphs.push(paragraph);
+      allLines.push(line);
+      paragraphMap.set(lineIndex, paragraph);
+      lineIndex++;
     }
   }
 
-  // Add final page if any lines remain
-  if (currentPageLines.length > 0) {
+  // Distribute lines across pages
+  for (let i = 0; i < allLines.length; i += linesPerPage) {
+    const pageLines = allLines.slice(i, i + linesPerPage);
+    const pageParagraphs = Array.from(new Set(
+      pageLines.map((_, idx) => paragraphMap.get(i + idx)).filter(Boolean)
+    )) as LayoutParagraph[];
+
     pages.push(createPageFromLines(
       pages.length,
-      currentPageLines,
-      currentPageParagraphs,
+      pageLines,
+      pageParagraphs,
       config
     ));
   }
@@ -244,6 +237,16 @@ function balancePage(
 ): { pages: SectionPage[]; diagnostics: SectionDiagnostic[] } {
   const diagnostics: SectionDiagnostic[] = [];
   const isLastPage = pageIndex === pages.length - 1;
+  
+  const currentPage = pages[pageIndex];
+  if (!currentPage) {
+    return { pages, diagnostics };
+  }
+
+  // If already balanced, no need to proceed
+  if (currentPage.isBalanced) {
+    return { pages, diagnostics };
+  }
 
   // Stage A: Try different split points
   const resultA = stageA_DifferentSplit(pages, pageIndex, config, isLastPage);
