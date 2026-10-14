@@ -147,7 +147,14 @@ export type DiagnosticCode =
   | 'MANUAL_BREAK_CONFLICT'
   | 'LAYOUT_NOT_STABLE'
   | 'CONFIG_INVALID'
-  | 'XREF_TARGET_MISSING';
+  | 'XREF_TARGET_MISSING'
+  | 'SECTION_BALANCE_FAILED'
+  | 'UNBALANCED_FILL_PAGE'
+  | 'WORD_SPACING_OUTSIDE_PREFERRED'
+  | 'PARAGRAPH_SPACING_EXCEEDED'
+  | 'ALTERNATIVE_BREAK_USED'
+  | 'LINES_MOVED_BETWEEN_PAGES'
+  | 'PARAGRAPH_SPLIT_ACROSS_PAGES';
 
 /** Diagnostic message */
 export interface Diagnostic {
@@ -273,4 +280,105 @@ export interface LayoutResult {
   metrics: LayoutMetrics;
   trace?: DecisionTrace[];
   waivers?: WaiverRecord[];
+}
+
+// ============================================================================
+// Section-Level Balancing Types (ADR-007)
+// ============================================================================
+
+/** Paragraph opening with window */
+export interface ParagraphOpening {
+  /** Number of words in the opening */
+  wordCount: number;
+  /** Height of window in lines (default: 1) */
+  windowLines: number;
+  /** Width of window (width of emphasized word, in mpt) */
+  windowWidth: Distance;
+}
+
+/** Alternative line break with different word spacing */
+export interface LineBreakAlternative {
+  /** Lines broken with different spacing */
+  lines: ShapedRun[][];
+  /** Word spacing as percentage of natural spacing (80-130) */
+  wordSpacingPercent: number;
+  /** Quality score (0-1, higher is better) */
+  quality: number;
+  /** Penalty information */
+  penaltyInfo?: {
+    /** Number of rivers detected */
+    rivers?: number;
+    /** Number of tight lines (<90%) */
+    tightLines?: number;
+    /** Number of loose lines (>115%) */
+    looseLines?: number;
+  };
+}
+
+/** Footnote reference within a paragraph */
+export interface FootnoteRef {
+  /** ID of the footnote */
+  footnoteId: string;
+  /** Line index in paragraph where reference appears */
+  lineIndex: number;
+}
+
+/** Paragraph style properties */
+export interface ParagraphStyle {
+  /** Last line alignment */
+  lastLine: 'justify' | 'start' | 'center';
+  /** Minimum lines at start of page (widow control) */
+  widows: number;
+  /** Minimum lines at end of page (orphan control) */
+  orphans: number;
+  /** Keep this paragraph with the next one */
+  keepWithNext?: boolean;
+}
+
+/** Layout paragraph with section balancing support */
+export interface LayoutParagraph {
+  /** Stable paragraph ID */
+  id: string;
+  /** Lines in this paragraph (current break) */
+  lines: ShapedRun[][];
+  /** Paragraph style */
+  style: ParagraphStyle;
+  /** Opening with window (optional) */
+  opening?: ParagraphOpening;
+  /** Alternative line breaks (different spacing) */
+  alternativeBreaks?: LineBreakAlternative[];
+  /** Footnote references in this paragraph */
+  footnoteRefs?: FootnoteRef[];
+}
+
+/** Footnote content block */
+export interface FootnoteNote {
+  /** Footnote ID */
+  id: string;
+  /** Content blocks (can be multiple paragraphs) */
+  blocks: LayoutParagraph[];
+  /** Numbering style */
+  numberingStyle: 'digits' | 'asterisks';
+}
+
+/** Section for layout balancing */
+export interface LayoutSection {
+  /** Stable section ID */
+  id: string;
+  /** Section type */
+  kind: 'front' | 'body' | 'back';
+  /** Paragraphs in this section */
+  paragraphs: LayoutParagraph[];
+  /** Balance policy for this section */
+  balancePolicy: 'fill' | 'balanced';
+  /** Footnotes in this section */
+  footnotes?: FootnoteNote[];
+}
+
+/** Section diagnostic with stable key */
+export interface SectionDiagnostic extends Diagnostic {
+  /** Stable key: sectionId:paragraphId:code */
+  stableKey: string;
+  /** Paragraph ID (if paragraph-specific) */
+  paragraphId?: string;
 }

@@ -174,3 +174,66 @@ export function hashConfig(config: EngineConfig): string {
   }
   return Math.abs(hash).toString(16).padStart(8, '0');
 }
+
+// ============================================================================
+// Section-Level Balancing Configuration (ADR-007)
+// ============================================================================
+
+/** Word spacing range configuration */
+export interface WordSpacingRangeConfig {
+  /** Preferred range (no diagnostics) */
+  preferred: {
+    /** Minimum percentage of natural spacing */
+    min: number;
+    /** Maximum percentage of natural spacing */
+    max: number;
+  };
+  /** Allowed range (info diagnostic outside preferred) */
+  allowed: {
+    /** Minimum percentage of natural spacing */
+    min: number;
+    /** Maximum percentage of natural spacing */
+    max: number;
+  };
+}
+
+/** Default word spacing configuration (proposal-for-approval) */
+export const DEFAULT_WORD_SPACING_CONFIG: WordSpacingRangeConfig = {
+  preferred: {
+    min: 90, // proposal-for-approval
+    max: 115, // proposal-for-approval
+  },
+  allowed: {
+    min: 80, // proposal-for-approval
+    max: 130, // proposal-for-approval
+  },
+};
+
+/** Section balancing configuration */
+export interface SectionBalancingConfig {
+  /** Maximum attempts per page (proposal-for-approval) */
+  maxAttempts: number;
+  /** Look-ahead pages */
+  lookAheadPages: number;
+  /** Look-back pages */
+  lookBackPages: number;
+  /** Minimum lines in paragraph to allow split (proposal-for-approval) */
+  minParagraphLinesToSplit: number;
+  /** Minimum widows (lines at start of page) */
+  widows: number;
+  /** Minimum orphans (lines at end of page) */
+  orphans: number;
+  /** Balance tolerance in mpt */
+  balanceTolerance: number;
+}
+
+/** Default section balancing configuration */
+export const DEFAULT_SECTION_BALANCING_CONFIG: SectionBalancingConfig = {
+  maxAttempts: 100, // proposal-for-approval
+  lookAheadPages: 5,
+  lookBackPages: 1,
+  minParagraphLinesToSplit: 4, // proposal-for-approval
+  widows: 2,
+  orphans: 2,
+  balanceTolerance: 0, // Perfect balance
+};
