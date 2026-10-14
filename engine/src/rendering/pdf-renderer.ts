@@ -1,12 +1,13 @@
 /**
- * PDF rendering with precise glyph positioning.
+ * PDF rendering with word-level text placement.
  * Implements Alternative A (word-level) from ADR-004.
  * 
- * Uses PDFKit with direct glyph access via:
- * - font.glyphForCodePoint(codePoint) → glyph ID
- * - font.glyphAdvances(glyphIds) → widths
+ * Current limitation: Uses PDFKit's text() method for words.
+ * This does NOT draw glyphs directly - PDFKit handles glyph rendering internally.
  * 
- * This gives us the same glyph IDs and advances that HarfBuzz produces.
+ * For direct glyph drawing (Alternative B), see:
+ * - tools/render-glyphs-directly.ts (feasibility study)
+ * - Future M2+ task: Implement direct glyph positioning
  */
 
 import PDFDocument from 'pdfkit';
