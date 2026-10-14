@@ -143,6 +143,8 @@ export function layoutDocument(
           pageHeight: fullConfig.pageHeight,
           lineHeight: fullConfig.lineHeight,
           topMargin: fullConfig.topMargin,
+          bottomMargin: fullConfig.bottomMargin,
+          columnGap: fullConfig.columnGap,
           balanceTolerance: fullConfig.balanceTolerance ?? 0,
           enableBalancing: true,
         })
@@ -150,6 +152,8 @@ export function layoutDocument(
           pageHeight: fullConfig.pageHeight,
           lineHeight: fullConfig.lineHeight,
           topMargin: fullConfig.topMargin,
+          bottomMargin: fullConfig.bottomMargin,
+          columnGap: fullConfig.columnGap,
         });
 
     // Convert to PageLayout format

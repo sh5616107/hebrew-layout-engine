@@ -5,7 +5,6 @@ import {
   mmToMpt,
   mptToMm,
   validateMpt,
-  MPT_PER_PT,
   MPT_PER_MM,
 } from '../../../src/core/units.js';
 

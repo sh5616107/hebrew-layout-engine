@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { layoutTwoColumns, getColumnXPosition, calculateColumnWidth, type ShapedWord } from '../../../src/layout/two-column-layout';
+import { layoutTwoColumns, layoutTwoColumnsBalanced, getColumnXPosition, calculateColumnWidth, type ShapedWord } from '../../../src/layout/two-column-layout';
 
 describe('Two-Column Layout', () => {
   // Helper to create mock line
   function mockLine(wordCount: number): ShapedWord[] {
-    return Array(wordCount).fill(null).map((_, i) => ({
-      text: `word${i}`,
+    return Array(wordCount).fill(null).map((_, _i) => ({
+      text: `word${_i}`,
       glyphIds: [1],
       advances: [10],
       width: 10,
@@ -14,7 +14,7 @@ describe('Two-Column Layout', () => {
 
   describe('Basic layout', () => {
     it('should split lines evenly into two columns', () => {
-      const lines = Array(40).fill(null).map((_, i) => mockLine(2));
+      const lines = Array(40).fill(null).map((_, _i) => mockLine(2));
       
       const result = layoutTwoColumns(lines, {
         pageHeight: 200,
@@ -249,6 +249,214 @@ describe('Two-Column Layout', () => {
       expect(result.leftColumn.lines).toHaveLength(56); // only 56 left
       expect(result.overflow).toHaveLength(0);
       expect(result.fitsOnPage).toBe(true);
+    });
+  });
+
+  describe('Bottom margin regression tests', () => {
+    it('should respect bottomMargin when calculating max lines per column', () => {
+      // Regression test for commit 6ed37f2
+      // bottomMargin must reduce available height
+      const lines = Array(50).fill(null).map(() => mockLine(3));
+      
+      const result = layoutTwoColumns(lines, {
+        pageHeight: 200,
+        lineHeight: 10,
+        topMargin: 20,
+        bottomMargin: 30, // Large bottom margin
+      });
+
+      // Available: 200 - 20 (top) - 30 (bottom) = 150pt
+      // Max lines per column: floor(150 / 10) = 15
+      // Total capacity: 15 × 2 = 30 lines
+      const totalLinesOnPage = result.rightColumn.lines.length + result.leftColumn.lines.length;
+      
+      expect(totalLinesOnPage).toBe(30);
+      expect(result.overflow).toHaveLength(20);
+      expect(result.fitsOnPage).toBe(false);
+    });
+
+    it('should calculate correct max lines with bottomMargin=0', () => {
+      const lines = Array(50).fill(null).map(() => mockLine(2));
+      
+      const result = layoutTwoColumns(lines, {
+        pageHeight: 200,
+        lineHeight: 10,
+        topMargin: 0,
+        bottomMargin: 0,
+      });
+
+      // Available: 200pt
+      // Max lines per column: floor(200 / 10) = 20
+      // Total: 40 lines
+      expect(result.rightColumn.lines).toHaveLength(20);
+      expect(result.leftColumn.lines).toHaveLength(20);
+      expect(result.overflow).toHaveLength(10);
+    });
+  });
+});
+
+
+describe('layoutTwoColumnsBalanced', () => {
+  function mockLine(wordCount: number): ShapedWord[] {
+    return Array(wordCount).fill(null).map((_, i) => ({
+      text: `word${i}`,
+      glyphIds: [1],
+      advances: [10],
+      width: 10,
+    }));
+  }
+
+  describe('Bottom margin in balanced layout', () => {
+    it('should respect bottomMargin when calculating page capacity', () => {
+      // Regression test: bottomMargin must reduce available height
+      const lines = Array(50).fill(null).map(() => mockLine(3));
+      
+      const result = layoutTwoColumnsBalanced(lines, {
+        pageHeight: 200,
+        lineHeight: 10,
+        topMargin: 20,
+        bottomMargin: 30,
+        balanceTolerance: 0,
+        enableBalancing: true,
+      });
+
+      // Available: 200 - 20 - 30 = 150pt
+      // Max lines per column: floor(150 / 10) = 15
+      // Total capacity: 15 × 2 = 30 lines
+      const totalLinesOnPage = result.rightColumn.lines.length + result.leftColumn.lines.length;
+      
+      expect(totalLinesOnPage).toBe(30);
+      expect(result.overflow).toHaveLength(20);
+      expect(result.fitsOnPage).toBe(false);
+    });
+
+    it('should calculate correct max lines with bottomMargin=0', () => {
+      const lines = Array(44).fill(null).map(() => mockLine(2));
+      
+      const result = layoutTwoColumnsBalanced(lines, {
+        pageHeight: 200,
+        lineHeight: 10,
+        topMargin: 0,
+        bottomMargin: 0,
+        balanceTolerance: 0,
+        enableBalancing: true,
+      });
+
+      // Available: 200pt
+      // Max lines per column: floor(200 / 10) = 20
+      // Total: 40 lines capacity
+      // 44 lines → 40 on page, 4 overflow
+      const totalLinesOnPage = result.rightColumn.lines.length + result.leftColumn.lines.length;
+      expect(totalLinesOnPage).toBe(40);
+      expect(result.overflow).toHaveLength(4);
+    });
+  });
+
+  describe('Balance tolerance edge cases', () => {
+    it('should handle balanceTolerance=0 with single line without division by zero', () => {
+      // Regression test: avoid division by zero in quality calculation
+      const lines = [mockLine(3)];
+      
+      const result = layoutTwoColumnsBalanced(lines, {
+        pageHeight: 200,
+        lineHeight: 10,
+        topMargin: 0,
+        bottomMargin: 0,
+        balanceTolerance: 0, // Perfect balance required
+        enableBalancing: true,
+      });
+
+      // Single line → right column has 1 line, left is empty
+      expect(result.rightColumn.lines).toHaveLength(1);
+      expect(result.leftColumn.lines).toHaveLength(0);
+      expect(result.balanceInfo?.bottomDelta).toBe(10);
+      expect(result.balanceInfo?.isBalanced).toBe(false);
+      expect(result.balanceInfo?.quality).toBe(0); // Not balanced with tolerance=0
+    });
+
+    it('should calculate quality=1 for perfect balance with tolerance=0', () => {
+      const lines = Array(10).fill(null).map(() => mockLine(2));
+      
+      const result = layoutTwoColumnsBalanced(lines, {
+        pageHeight: 200,
+        lineHeight: 10,
+        topMargin: 0,
+        bottomMargin: 0,
+        balanceTolerance: 0,
+        enableBalancing: true,
+      });
+
+      // 10 lines → 5 + 5 = perfect balance
+      expect(result.rightColumn.lines).toHaveLength(5);
+      expect(result.leftColumn.lines).toHaveLength(5);
+      expect(result.balanceInfo?.bottomDelta).toBe(0);
+      expect(result.balanceInfo?.isBalanced).toBe(true);
+      expect(result.balanceInfo?.quality).toBe(1);
+    });
+
+    it('should calculate quality based on balanceTolerance, not lineHeight', () => {
+      const lines = Array(11).fill(null).map(() => mockLine(2));
+      
+      const result = layoutTwoColumnsBalanced(lines, {
+        pageHeight: 200,
+        lineHeight: 10,
+        topMargin: 0,
+        bottomMargin: 0,
+        balanceTolerance: 20, // 2 lines tolerance
+        enableBalancing: true,
+      });
+
+      // 11 lines → 6 + 5 = delta of 10pt (1 line)
+      expect(result.rightColumn.lines).toHaveLength(6);
+      expect(result.leftColumn.lines).toHaveLength(5);
+      expect(result.balanceInfo?.bottomDelta).toBe(10);
+      expect(result.balanceInfo?.isBalanced).toBe(true); // Within tolerance
+      
+      // Quality: 1 - (10 / 20) = 0.5
+      expect(result.balanceInfo?.quality).toBeCloseTo(0.5, 5);
+    });
+
+    it('should set quality=0 when delta exceeds tolerance', () => {
+      const lines = Array(11).fill(null).map(() => mockLine(2));
+      
+      const result = layoutTwoColumnsBalanced(lines, {
+        pageHeight: 200,
+        lineHeight: 10,
+        topMargin: 0,
+        bottomMargin: 0,
+        balanceTolerance: 5, // Very tight tolerance (half line)
+        enableBalancing: true,
+      });
+
+      // 11 lines → 6 + 5 = delta of 10pt
+      expect(result.balanceInfo?.bottomDelta).toBe(10);
+      expect(result.balanceInfo?.isBalanced).toBe(false);
+      
+      // Quality: 1 - (10 / 5) = -1, clamped to 0
+      expect(result.balanceInfo?.quality).toBe(0);
+    });
+  });
+
+  describe('Overflow handling in balanced mode', () => {
+    it('should move overflow lines to next page', () => {
+      const lines = Array(60).fill(null).map(() => mockLine(2));
+      
+      const result = layoutTwoColumnsBalanced(lines, {
+        pageHeight: 100,
+        lineHeight: 10,
+        topMargin: 0,
+        bottomMargin: 0,
+        balanceTolerance: 0,
+        enableBalancing: true,
+      });
+
+      // Available: 100pt / 10pt = 10 lines per column
+      // Total capacity: 20 lines
+      // 60 - 20 = 40 overflow
+      const totalOnPage = result.rightColumn.lines.length + result.leftColumn.lines.length;
+      expect(totalOnPage).toBe(20);
+      expect(result.overflow).toHaveLength(40);
+      expect(result.fitsOnPage).toBe(false);
     });
   });
 });

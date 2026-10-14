@@ -200,23 +200,32 @@ export function layoutTwoColumnsBalanced(
     lineHeight,
     columnGap = 14,
     topMargin = 0,
-    bottomMargin = 0, // Not used in balancing calculation but part of options
-    balanceTolerance = lineHeight, // Default: allow 1 line difference
+    bottomMargin = 0,
+    balanceTolerance = 0, // Default: perfect balance (changed from lineHeight)
   } = options;
 
-  void columnGap;
-  void bottomMargin; // Mark as intentionally unused
+  void columnGap; // Horizontal positioning done by callers
+  
+  // Calculate available height considering bottom margin
+  const availableHeight = pageHeight - topMargin - bottomMargin;
+  const maxLinesPerColumn = Math.floor(availableHeight / lineHeight);
 
+  
   const totalLines = lines.length;
   
+  // Check if content fits within page capacity
+  const maxTotalLines = maxLinesPerColumn * 2;
+  const overflow = totalLines > maxTotalLines ? lines.slice(maxTotalLines) : [];
+  const linesToLayout = totalLines > maxTotalLines ? lines.slice(0, maxTotalLines) : lines;
+  
   // If too few lines, use balanced split
-  if (totalLines === 0) {
+  if (linesToLayout.length === 0) {
     return {
       rightColumn: { lines: [], lineYPositions: [], usedHeight: 0 },
       leftColumn: { lines: [], lineYPositions: [], usedHeight: 0 },
       pageHeight,
-      fitsOnPage: true,
-      overflow: [],
+      fitsOnPage: overflow.length === 0,
+      overflow,
       balanceInfo: {
         bottomDelta: 0,
         isBalanced: true,
@@ -225,15 +234,15 @@ export function layoutTwoColumnsBalanced(
     };
   }
   
-  if (totalLines === 1) {
-    const line = lines[0];
+  if (linesToLayout.length === 1) {
+    const line = linesToLayout[0];
     if (!line) {
       return {
         rightColumn: { lines: [], lineYPositions: [], usedHeight: 0 },
         leftColumn: { lines: [], lineYPositions: [], usedHeight: 0 },
         pageHeight,
-        fitsOnPage: true,
-        overflow: [],
+        fitsOnPage: overflow.length === 0,
+        overflow,
         balanceInfo: {
           bottomDelta: 0,
           isBalanced: true,
@@ -247,31 +256,39 @@ export function layoutTwoColumnsBalanced(
       lineYPositions: [topMargin],
       usedHeight: lineHeight,
     };
+    
+    // Calculate quality: single line means one column is empty
+    // Quality degrades based on tolerance
+    const bottomDelta = lineHeight;
+    const quality = balanceTolerance === 0 
+      ? 0 // Perfect balance required but not achieved
+      : Math.max(0, 1 - bottomDelta / balanceTolerance);
+    
     return {
       rightColumn,
       leftColumn: { lines: [], lineYPositions: [], usedHeight: 0 },
       pageHeight,
-      fitsOnPage: true,
-      overflow: [],
+      fitsOnPage: overflow.length === 0,
+      overflow,
       balanceInfo: {
-        bottomDelta: lineHeight,
-        isBalanced: lineHeight <= balanceTolerance,
-        quality: Math.max(0, 1 - lineHeight / balanceTolerance),
+        bottomDelta,
+        isBalanced: bottomDelta <= balanceTolerance,
+        quality,
       },
     };
   }
   
-  if (totalLines === 2) {
+  if (linesToLayout.length === 2) {
     // Perfect 1+1 split
-    const line0 = lines[0];
-    const line1 = lines[1];
+    const line0 = linesToLayout[0];
+    const line1 = linesToLayout[1];
     if (!line0 || !line1) {
       return {
         rightColumn: { lines: [], lineYPositions: [], usedHeight: 0 },
         leftColumn: { lines: [], lineYPositions: [], usedHeight: 0 },
         pageHeight,
-        fitsOnPage: true,
-        overflow: [],
+        fitsOnPage: overflow.length === 0,
+        overflow,
         balanceInfo: {
           bottomDelta: 0,
           isBalanced: true,
@@ -294,8 +311,8 @@ export function layoutTwoColumnsBalanced(
       rightColumn,
       leftColumn,
       pageHeight,
-      fitsOnPage: true,
-      overflow: [],
+      fitsOnPage: overflow.length === 0,
+      overflow,
       balanceInfo: {
         bottomDelta: 0,
         isBalanced: true,
@@ -306,8 +323,8 @@ export function layoutTwoColumnsBalanced(
 
   // Try different split points around the middle
   // For Hebrew RTL, prefer MORE lines in right column when uneven
-  const middle = Math.ceil(totalLines / 2); // Use ceil for RTL preference
-  const searchRange = Math.min(3, Math.floor(totalLines / 3)); // Search ±3 lines from middle
+  const middle = Math.ceil(linesToLayout.length / 2); // Use ceil for RTL preference
+  const searchRange = Math.min(3, Math.floor(linesToLayout.length / 3)); // Search ±3 lines from middle
   
   let bestSplit = middle;
   let bestDelta = Infinity;
@@ -316,11 +333,11 @@ export function layoutTwoColumnsBalanced(
     const splitPoint = middle + offset;
     
     // Skip invalid splits
-    if (splitPoint < 0 || splitPoint > totalLines) continue;
+    if (splitPoint < 0 || splitPoint > linesToLayout.length) continue;
     
-    // Handle edge case: if splitPoint = totalLines, all lines go to right
-    if (splitPoint === totalLines) {
-      const rightHeight = totalLines * lineHeight;
+    // Handle edge case: if splitPoint = linesToLayout.length, all lines go to right
+    if (splitPoint === linesToLayout.length) {
+      const rightHeight = linesToLayout.length * lineHeight;
       const leftHeight = 0;
       const delta = Math.abs(rightHeight - leftHeight);
       
@@ -332,7 +349,7 @@ export function layoutTwoColumnsBalanced(
     }
     
     const rightHeight = splitPoint * lineHeight;
-    const leftHeight = (totalLines - splitPoint) * lineHeight;
+    const leftHeight = (linesToLayout.length - splitPoint) * lineHeight;
     const delta = Math.abs(rightHeight - leftHeight);
     
     // Prefer larger right column when deltas are equal (RTL convention)
@@ -346,8 +363,8 @@ export function layoutTwoColumnsBalanced(
   }
   
   // Create layout with best split
-  const rightColumnLines = lines.slice(0, bestSplit);
-  const leftColumnLines = lines.slice(bestSplit);
+  const rightColumnLines = linesToLayout.slice(0, bestSplit);
+  const leftColumnLines = linesToLayout.slice(bestSplit);
   
   const rightYPositions: number[] = [];
   for (let i = 0; i < rightColumnLines.length; i++) {
@@ -373,14 +390,20 @@ export function layoutTwoColumnsBalanced(
   
   const bottomDelta = Math.abs(rightColumn.usedHeight - leftColumn.usedHeight);
   const isBalanced = bottomDelta <= balanceTolerance;
-  const quality = bottomDelta === 0 ? 1 : Math.max(0, 1 - bottomDelta / lineHeight);
+  
+  // Calculate quality based on balanceTolerance
+  // If tolerance is 0, quality is 1 only for perfect balance, otherwise 0
+  // If tolerance > 0, quality degrades linearly from 1 (perfect) to 0 (at tolerance)
+  const quality = balanceTolerance === 0
+    ? (bottomDelta === 0 ? 1 : 0)
+    : Math.max(0, 1 - bottomDelta / balanceTolerance);
   
   return {
     rightColumn,
     leftColumn,
     pageHeight,
-    fitsOnPage: true,
-    overflow: [],
+    fitsOnPage: overflow.length === 0,
+    overflow,
     balanceInfo: {
       bottomDelta,
       isBalanced,

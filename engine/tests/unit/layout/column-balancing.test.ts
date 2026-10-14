@@ -31,6 +31,7 @@ describe('Column Balancing (M2)', () => {
       pageHeight: 500,
       lineHeight: 20,
       enableBalancing: true,
+      balanceTolerance: 20, // 1 line tolerance (was implicit default)
     });
     
     // Should split 3+2 (closer to middle than 2+3)
@@ -76,6 +77,7 @@ describe('Column Balancing (M2)', () => {
       pageHeight: 500,
       lineHeight: 20,
       enableBalancing: true,
+      balanceTolerance: 20, // 1 line tolerance
     });
     
     // Should split 4+3 or 3+4 (1 line difference)
@@ -132,6 +134,7 @@ describe('Column Balancing (M2)', () => {
       pageHeight: 500,
       lineHeight: 20,
       enableBalancing: true,
+      balanceTolerance: 20, // 1 line tolerance
     });
     
     expect(result.rightColumn.lines.length).toBe(1);

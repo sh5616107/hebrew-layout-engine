@@ -4,9 +4,10 @@
  * getReorderSegments(text, embeddingLevels) receives the object
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 
 describe('bidi-js - Corrected API', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let bidiFactory: any;
 
   beforeAll(async () => {

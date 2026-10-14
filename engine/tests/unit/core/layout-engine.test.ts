@@ -262,3 +262,74 @@ describe('Layout Engine Integration', () => {
     });
   });
 });
+
+
+describe('Bottom margin integration tests', () => {
+  function mockWord(text: string, width: number): ShapedWord {
+    return {
+      text,
+      glyphIds: Array(text.length).fill(1),
+      advances: Array(text.length).fill(width / text.length),
+      width,
+    };
+  }
+
+  it('should respect bottomMargin in fill mode (regression test for 6ed37f2)', () => {
+    // Create enough words to test margin effect
+    // Each word is 200pt wide → 1 word per line
+    const words: ShapedWord[] = [];
+    for (let i = 0; i < 50; i++) {
+      words.push(mockWord(`word${i}`, 200));
+    }
+
+    const result = layoutDocument(words, {
+      pageHeight: 300,
+      lineHeight: 10,
+      topMargin: 50,
+      bottomMargin: 50,
+      pagePolicy: 'fill',
+    });
+
+    // Available: 300 - 50 - 50 = 200pt
+    // Max lines per column: floor(200 / 10) = 20
+    // Total per page: 40 lines
+    const linesOnFirstPage = 
+      result.pages[0].rightColumn.lines.length +
+      result.pages[0].leftColumn.lines.length;
+    
+    expect(linesOnFirstPage).toBe(40);
+    expect(result.pageCount).toBeGreaterThan(1); // Should need another page
+  });
+
+  it('should respect bottomMargin in balanced mode (regression test for 6ed37f2)', () => {
+    const words: ShapedWord[] = [];
+    for (let i = 0; i < 50; i++) {
+      words.push(mockWord(`w${i}`, 200));
+    }
+
+    const result = layoutDocument(words, {
+      pageHeight: 300,
+      lineHeight: 10,
+      topMargin: 50,
+      bottomMargin: 50,
+      pagePolicy: 'balanced',
+      balanceTolerance: 0,
+    });
+
+    // Available: 300 - 50 - 50 = 200pt
+    // Max lines per column: floor(200 / 10) = 20
+    // Total per page: 40 lines (balanced)
+    const linesOnFirstPage = 
+      result.pages[0].rightColumn.lines.length +
+      result.pages[0].leftColumn.lines.length;
+    
+    expect(linesOnFirstPage).toBe(40);
+    
+    // Verify balancing: difference should be 0 or 1 line
+    const lineDiff = Math.abs(
+      result.pages[0].rightColumn.lines.length - 
+      result.pages[0].leftColumn.lines.length
+    );
+    expect(lineDiff).toBeLessThanOrEqual(1);
+  });
+});
