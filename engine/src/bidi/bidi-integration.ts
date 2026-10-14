@@ -52,8 +52,7 @@ export function applyBiDiToWords(
   // (Full UAX #9 would reorder at character level within words)
   
   // Find which words are RTL vs LTR based on their character types
-  // (unused in current simplified implementation, but kept for future use)
-  words.forEach((_, i) => {
+  const wordDirections: Array<'LTR' | 'RTL'> = words.map((_, i) => {
     const boundary = wordBoundaries[i];
     if (boundary) {
       const { start, end } = boundary;
@@ -61,15 +60,18 @@ export function applyBiDiToWords(
       
       // Word direction is determined by majority of its characters
       const avgLevel = wordLevels.reduce((sum, l) => sum + l, 0) / wordLevels.length;
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      avgLevel >= 1 ? 'RTL' : 'LTR';
+      return avgLevel >= 1 ? 'RTL' : 'LTR';
     }
+    return 'LTR';
   });
 
   // In RTL base direction, reverse the word order
   if (bidiResult.baseDirection === BaseDirection.RTL) {
     return [...words].reverse();
   }
+
+  // For future use: wordDirections could be returned as metadata
+  void wordDirections;
 
   return words;
 }

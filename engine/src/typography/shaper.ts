@@ -6,23 +6,67 @@
 import type { PositionedGlyph, ShapedRun } from '../core/types.js';
 import { ptToMpt } from '../core/units.js';
 
-// Import harfbuzzjs
-// Note: May need to adjust import based on package structure
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let hb: any;
+// HarfBuzz types
+interface HarfBuzzBlob {
+  destroy(): void;
+}
+
+interface HarfBuzzFace {
+  destroy(): void;
+}
+
+interface HarfBuzzFont {
+  setScale(x: number, y: number): void;
+  destroy(): void;
+}
+
+interface HarfBuzzBuffer {
+  addText(text: string): void;
+  guessSegmentProperties(): void;
+  json(font: HarfBuzzFont): HarfBuzzGlyphInfo[];
+  destroy(): void;
+  direction: string;
+}
+
+interface HarfBuzzGlyphInfo {
+  g: number; // glyph ID
+  dx?: number; // x offset (26.6 fixed-point)
+  dy?: number; // y offset
+  ax?: number; // x advance
+  ay?: number; // y advance
+}
+
+interface HarfBuzzFeature {
+  tag: string;
+  value: number;
+}
+
+interface HarfBuzzInstance {
+  createBlob(data: ArrayBuffer): HarfBuzzBlob;
+  createFace(blob: HarfBuzzBlob, index: number): HarfBuzzFace;
+  createFont(face: HarfBuzzFace): HarfBuzzFont;
+  createBuffer(): HarfBuzzBuffer;
+  shape(font: HarfBuzzFont, buffer: HarfBuzzBuffer, features?: HarfBuzzFeature[]): void;
+}
+
+// Module cache
+let hb: HarfBuzzInstance | null = null;
 
 /**
  * Initialize HarfBuzz (lazy load)
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function initHarfBuzz(): Promise<any> {
+async function initHarfBuzz(): Promise<HarfBuzzInstance> {
   if (hb) return hb;
   
   try {
     // Try dynamic import
     const module = await import('harfbuzzjs');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    hb = (module as any).default || module;
+    // TypeScript can't infer harfbuzzjs structure, cast to unknown first
+    const mod = module as unknown as { default?: HarfBuzzInstance } | HarfBuzzInstance;
+    hb = ('default' in mod ? mod.default : mod) as HarfBuzzInstance;
+    if (!hb) {
+      throw new Error('HarfBuzz module loaded but instance is null');
+    }
     return hb;
   } catch (error) {
     throw new Error(`Failed to load HarfBuzz: ${error}`);
@@ -44,19 +88,19 @@ export async function shape(
   fontSize: number,
   features?: Record<string, boolean>
 ): Promise<ShapedRun> {
-  await initHarfBuzz();
+  const hbInstance = await initHarfBuzz();
   
   // Create blob from font data
-  const blob = hb.createBlob(fontBuffer);
-  const face = hb.createFace(blob, 0);
-  const font = hb.createFont(face);
+  const blob = hbInstance.createBlob(fontBuffer);
+  const face = hbInstance.createFace(blob, 0);
+  const font = hbInstance.createFont(face);
   
   // Set font size (HarfBuzz uses 26.6 fixed-point, we use points)
   const scale = fontSize * 64; // Convert to 26.6 format
   font.setScale(scale, scale);
   
   // Create buffer
-  const buffer = hb.createBuffer();
+  const buffer = hbInstance.createBuffer();
   buffer.addText(text);
   buffer.guessSegmentProperties();
   
@@ -66,14 +110,13 @@ export async function shape(
     : [];
   
   // Shape!
-  hb.shape(font, buffer, featureList);
+  hbInstance.shape(font, buffer, featureList);
   
   // Get results
   const result = buffer.json(font);
   
   // Convert to our format
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const glyphs: PositionedGlyph[] = result.map((item: any) => ({
+  const glyphs: PositionedGlyph[] = result.map((item) => ({
     glyphId: item.g,
     x: ptToMpt((item.dx || 0) / 64), // Convert from 26.6 to mpt
     y: ptToMpt((item.dy || 0) / 64),

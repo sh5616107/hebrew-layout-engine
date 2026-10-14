@@ -68,13 +68,14 @@ export async function renderToPDF(
 
   // Finalize and save
   return new Promise((resolve, reject) => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const stream = require('fs').createWriteStream(outputPath);
-    doc.pipe(stream);
-    doc.end();
+    import('fs').then((fsModule) => {
+      const stream = fsModule.createWriteStream(outputPath);
+      doc.pipe(stream);
+      doc.end();
 
-    stream.on('finish', resolve);
-    stream.on('error', reject);
+      stream.on('finish', resolve);
+      stream.on('error', reject);
+    }).catch(reject);
   });
 }
 
