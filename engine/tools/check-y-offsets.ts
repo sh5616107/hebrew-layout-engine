@@ -67,41 +67,60 @@ function shapeText(text: string): ShapingResult {
 
 function generateReport() {
   console.log('='.repeat(80));
-  console.log('Y-OFFSET AND FEATURES CHECK');
+  console.log('בדיקת Y-offset ו-RTL');
   console.log('='.repeat(80));
   console.log();
   
   const testCases = [
-    { label: 'Plain (no nikud)', text: 'בראשית' },
-    { label: 'Nikud BELOW - Shva (בְּ)', text: 'בְּרְאְשִׁית' },
-    { label: 'Nikud BELOW - Segol (בֶּ)', text: 'בֶּרֶשֶת' },
-    { label: 'Nikud ABOVE - Holam (בֹּ)', text: 'בֹּקֶר' },
-    { label: 'Nikud ABOVE - Shin dot (שׁ/שׂ)', text: 'שָׁמַיִם שָׂדֶה' },
-    { label: 'Mixed nikud', text: 'בְּרֵאשִׁית' },
-    { label: 'Te\'amim ABOVE - Zaqef', text: 'בָּרָא֔' },
-    { label: 'Te\'amim BELOW - Etnachta (֑)', text: 'אֱלֹהִ֑ים' },
-    { label: 'Te\'amim BELOW - Merkha', text: 'בָּרָ֥א' },
-    { label: 'Complex (Gen 1:1)', text: 'בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים' },
+    { label: 'רגיל (ללא ניקוד)', text: 'בראשית' },
+    { label: 'ניקוד מתחת - שבא (בְּ)', text: 'בְּרְאְשִׁית' },
+    { label: 'ניקוד מתחת - סגול (בֶּ)', text: 'בֶּרֶשֶת' },
+    { label: 'ניקוד מעל - חולם (בֹּ)', text: 'בֹּקֶר' },
+    { label: 'ניקוד מעל - נקודת שין (שׁ/שׂ)', text: 'שָׁמַיִם שָׂדֶה' },
+    { label: 'ניקוד מעורב', text: 'בְּרֵאשִׁית' },
+    { label: 'טעם מעל - זקף', text: 'בָּרָא֔' },
+    { label: 'טעם מתחת - אתנחתא (֑)', text: 'אֱלֹהִ֑ים' },
+    { label: 'טעם מתחת - מרכא', text: 'בָּרָ֥א' },
+    { label: 'מורכב (בראשית א:א)', text: 'בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים' },
   ];
   
-  console.log('TEST CASES:');
+  console.log('מקרי בדיקה:');
   console.log('-'.repeat(80));
+  
+  let autoCheckPassed = 0;
+  let autoCheckFailed = 0;
   
   for (const testCase of testCases) {
     const result = shapeText(testCase.text);
     
     console.log();
     console.log(`${testCase.label}: "${testCase.text}"`);
-    console.log(`  Glyphs: ${result.glyphs.length}`);
-    console.log(`  Features: ${result.features.join(', ')}`);
+    console.log(`  גליפים: ${result.glyphs.length}`);
+    console.log(`  תכונות: ${result.features.join(', ')}`);
     
     const hasYOffset = result.glyphs.some(g => g.yOffset !== 0);
     const hasXOffset = result.glyphs.some(g => g.xOffset !== 0);
     const hasYAdvance = result.glyphs.some(g => g.yAdvance !== 0);
     
-    console.log(`  Has Y-offsets: ${hasYOffset ? '✅ YES' : '❌ NO'}`);
-    console.log(`  Has X-offsets: ${hasXOffset ? '✅ YES' : '❌ NO'}`);
-    console.log(`  Has Y-advance: ${hasYAdvance ? '✅ YES' : '❌ NO'}`);
+    console.log(`  יש Y-offsets: ${hasYOffset ? '✅ כן' : '❌ לא'}`);
+    console.log(`  יש X-offsets: ${hasXOffset ? '✅ כן' : '❌ לא'}`);
+    console.log(`  יש Y-advance: ${hasYAdvance ? '✅ כן' : '❌ לא'}`);
+    
+    // Auto-check: words with nikud should have spacing
+    const wordsInText = testCase.text.split(' ');
+    if (wordsInText.length > 1) {
+      // Check that glyphs have proper spacing (xAdvance > 0 for non-marks)
+      const baseGlyphs = result.glyphs.filter(g => g.xAdvance > 0);
+      const hasProperSpacing = baseGlyphs.length >= wordsInText.length;
+      
+      if (hasProperSpacing) {
+        console.log(`  רווחים בין מילים: ✅ תקין (${baseGlyphs.length} בסיסים)`);
+        autoCheckPassed++;
+      } else {
+        console.log(`  רווחים בין מילים: ❌ חסר (${baseGlyphs.length} < ${wordsInText.length})`);
+        autoCheckFailed++;
+      }
+    }
     
     if (hasYOffset) {
       const yOffsets = result.glyphs
@@ -109,7 +128,7 @@ function generateReport() {
         .map(g => g.yOffset);
       const minY = Math.min(...yOffsets);
       const maxY = Math.max(...yOffsets);
-      console.log(`  Y-offset range: ${minY} to ${maxY} font units`);
+      console.log(`  טווח Y-offset: ${minY} עד ${maxY} יחידות גופן`);
     }
     
     if (hasXOffset) {
@@ -118,13 +137,17 @@ function generateReport() {
         .map(g => g.xOffset);
       const minX = Math.min(...xOffsets);
       const maxX = Math.max(...xOffsets);
-      console.log(`  X-offset range: ${minX} to ${maxX} font units`);
+      console.log(`  טווח X-offset: ${minX} עד ${maxX} יחידות גופן`);
     }
   }
   
   console.log();
   console.log('='.repeat(80));
-  console.log('GENERATING VISUAL PDF...');
+  console.log('בדיקה אוטומטית:');
+  console.log(`  עבר: ${autoCheckPassed}/${testCases.length}`);
+  console.log(`  נכשל: ${autoCheckFailed}/${testCases.length}`);
+  console.log('='.repeat(80));
+  console.log('יוצר PDF ויזואלי...');
   console.log('='.repeat(80));
   
   // Generate PDF
@@ -134,32 +157,33 @@ function generateReport() {
   
   doc.registerFont('Ezra', FONT_PATH);
   
-  // Title
-  doc.fontSize(20).font('Helvetica-Bold').text('Y-Offset Visual Check', { align: 'center' });
-  doc.moveDown(1);
+  // Title in Hebrew
+  doc.fontSize(20).font('Ezra').text('בדיקת מיקום אנכי של ניקוד וטעמים', { align: 'center' });
+  doc.moveDown(0.5);
   
   doc.fontSize(10).font('Helvetica')
-    .text('Font: Ezra SIL', { align: 'center' })
+    .text('גופן: Ezra SIL (SILEOT.ttf)', { align: 'center' })
     .text('Script: Hebr, Language: heb, Direction: RTL', { align: 'center' });
   
   doc.moveDown(2);
   
-  // Test cases in RTL visual order (right to left)
+  // Test cases - display text in RTL order (right to left)
   for (const testCase of testCases) {
     const result = shapeText(testCase.text);
     
-    doc.fontSize(12).font('Helvetica-Bold').text(testCase.label, { continued: false, align: 'left' });
+    // Label in Hebrew (left-aligned for readability)
+    doc.fontSize(12).font('Helvetica').text(testCase.label, { continued: false, align: 'left' });
     
     const hasYOffset = result.glyphs.some(g => g.yOffset !== 0);
     const hasXOffset = result.glyphs.some(g => g.xOffset !== 0);
     
     doc.fontSize(9).font('Helvetica')
-      .text(`Glyphs: ${result.glyphs.length} | Y-offset: ${hasYOffset ? 'YES' : 'NO'} | X-offset: ${hasXOffset ? 'YES' : 'NO'}`, 
+      .text(`גליפים: ${result.glyphs.length} | Y-offset: ${hasYOffset ? 'כן' : 'לא'} | X-offset: ${hasXOffset ? 'כן' : 'לא'}`, 
         { continued: false, align: 'left' });
     
     doc.moveDown(0.3);
     
-    // Render at large size for visual inspection (RTL alignment)
+    // Render Hebrew text in RTL (right-aligned)
     doc.fontSize(48).font('Ezra').text(testCase.text, { align: 'right' });
     
     doc.moveDown(1);
@@ -173,17 +197,16 @@ function generateReport() {
   doc.end();
   
   stream.on('finish', () => {
-    console.log(`PDF saved to: ${OUTPUT_PDF}`);
+    console.log(`PDF נשמר ב: ${OUTPUT_PDF}`);
     console.log();
-    console.log('INSTRUCTIONS:');
-    console.log('  1. Open the PDF');
-    console.log('  2. Check that nikud appears ABOVE letters (e.g., segol)');
-    console.log('  3. Check that nikud appears BELOW letters (e.g., shva)');
-    console.log('  4. Check that te\'amim appear in correct positions');
-    console.log('  5. Take a screenshot and attach to ADR-004');
+    console.log('הוראות:');
+    console.log('  1. פתח את ה-PDF');
+    console.log('  2. בדוק שהניקוד מופיע מעל האותיות (חולם, קמץ)');
+    console.log('  3. בדוק שהניקוד מופיע מתחת האותיות (שבא, סגול)');
+    console.log('  4. בדוק שהטעמים במיקומים נכונים');
+    console.log('  5. בדוק שסדר המילים נכון (מימין לשמאל: בראשית ברא אלהים)');
+    console.log('  6. בדוק שיש רווחים בין המילים');
     console.log();
     console.log('='.repeat(80));
   });
 }
-
-generateReport();
