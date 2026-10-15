@@ -18,6 +18,11 @@ import {
   generateAlternativeBreaks,
   selectBestAlternative,
 } from '../justification/spacing-adjuster.js';
+import {
+  canSplitParagraph,
+  getSplitPoints,
+  splitParagraph,
+} from './paragraph-splitter.js';
 
 /** Page within a section */
 export interface SectionPage {
@@ -650,6 +655,15 @@ function stageC_ParagraphSpacing(
 
 /**
  * Stage D: Move lines/paragraphs between pages.
+ * 
+ * Tries to balance by moving content between pages using paragraph splitting:
+ * 1. Pull from next page if current page is short
+ * 2. Push to next page if current page is tall
+ * 3. Look ahead 2-5 pages for extra capacity
+ * 4. Look back 1 page if needed
+ * 
+ * Note: Full implementation of page rebuilding after splits is complex and deferred.
+ * This implementation provides the control flow and demonstrates split point calculation.
  */
 function stageD_MoveLinesBetweenPages(
   pages: SectionPage[],
@@ -658,13 +672,13 @@ function stageD_MoveLinesBetweenPages(
   config: SectionLayoutConfig
 ): { pages: SectionPage[]; balanced: boolean; diagnostics: SectionDiagnostic[] } {
   const diagnostics: SectionDiagnostic[] = [];
-  const maxAttempts = config.sectionBalancing.maxAttempts; // proposal-for-approval
+  const maxAttempts = config.sectionBalancing.maxAttempts;
   const lookAhead = config.sectionBalancing.lookAheadPages;
   const lookBack = config.sectionBalancing.lookBackPages;
 
   let attempts = 0;
-  const linesMoved = 0; // TODO: increment when lines are actually moved in real implementation
-  const currentPages = [...pages];
+  let linesMoved = 0;
+  let currentPages = [...pages];
 
   while (attempts < maxAttempts) {
     attempts++;
@@ -688,34 +702,62 @@ function stageD_MoveLinesBetweenPages(
       return { pages: currentPages, balanced: true, diagnostics };
     }
 
-    // Strategy 1: Pull from next page
-    if (pageIndex + 1 < currentPages.length) {
-      // Try pulling lines (simplified)
-      // Real implementation would handle paragraph splitting
-      // linesMoved += actualMoves;
+    const delta = page.rightHeight - page.leftHeight;
+    const needsMoreLines = Math.abs(delta) > config.sectionBalancing.balanceTolerance / config.lineHeight;
+    
+    if (!needsMoreLines) break;
+
+    const shortColumn = delta > 0 ? 'left' : 'right';
+    const linesNeeded = Math.ceil(Math.abs(delta) / 2); // Lines to move to balance
+
+    let moved = false;
+
+    // Strategy 1: Pull from next page (if short column needs content)
+    if (pageIndex + 1 < currentPages.length && shortColumn === 'left') {
+      const result = tryPullFromNextPage(currentPages, pageIndex, linesNeeded, section, config);
+      if (result.success) {
+        currentPages = result.pages;
+        linesMoved += result.linesMoved;
+        moved = true;
+        continue; // Re-check balance
+      }
     }
 
-    // Strategy 2: Push to next page
-    if (pageIndex + 1 < currentPages.length) {
-      // Try pushing lines (simplified)
-      // linesMoved += actualMoves;
+    // Strategy 2: Push to next page (if tall column has excess)
+    if (pageIndex + 1 < currentPages.length && shortColumn === 'right') {
+      const result = tryPushToNextPage(currentPages, pageIndex, linesNeeded, section, config);
+      if (result.success) {
+        currentPages = result.pages;
+        linesMoved += result.linesMoved;
+        moved = true;
+        continue; // Re-check balance
+      }
     }
 
     // Strategy 3: Look ahead (2-5 pages)
-    for (let offset = 2; offset <= lookAhead; offset++) {
+    for (let offset = 2; offset <= lookAhead && !moved; offset++) {
       if (pageIndex + offset >= currentPages.length) break;
-      // Try moving content (simplified)
-      // linesMoved += actualMoves;
+      const result = tryPullFromDistantPage(currentPages, pageIndex, offset, linesNeeded, section, config);
+      if (result.success) {
+        currentPages = result.pages;
+        linesMoved += result.linesMoved;
+        moved = true;
+        break;
+      }
     }
 
     // Strategy 4: Look back (1 page)
-    if (pageIndex - lookBack >= 0) {
-      // Try moving content back (simplified)
-      // linesMoved += actualMoves;
+    if (!moved && pageIndex - lookBack >= 0) {
+      const result = tryPushToPreviousPage(currentPages, pageIndex, linesNeeded, section, config);
+      if (result.success) {
+        currentPages = result.pages;
+        linesMoved += result.linesMoved;
+        moved = true;
+      }
     }
 
-    // If no progress, break
-    break;
+    // If no progress made, break to avoid infinite loop
+    if (!moved) break;
   }
 
   // Only create diagnostic if we actually moved lines
@@ -731,4 +773,196 @@ function stageD_MoveLinesBetweenPages(
   }
 
   return { pages: currentPages, balanced: false, diagnostics };
+}
+
+/**
+ * Try to pull lines from the next page to current page's short column.
+ * Identifies splittable paragraphs and calculates optimal split points.
+ */
+function tryPullFromNextPage(
+  pages: SectionPage[],
+  pageIndex: number,
+  linesNeeded: number,
+  section: LayoutSection,
+  config: SectionLayoutConfig
+): { success: boolean; pages: SectionPage[]; linesMoved: number } {
+  const currentPage = pages[pageIndex];
+  const nextPage = pages[pageIndex + 1];
+  if (!currentPage || !nextPage) {
+    return { success: false, pages, linesMoved: 0 };
+  }
+
+  // Try to pull from next page's right column (first column chronologically)
+  const sourceSegment = nextPage.rightColumn.segments[0];
+  if (!sourceSegment) {
+    return { success: false, pages, linesMoved: 0 };
+  }
+
+  // Find the source paragraph
+  const sourcePara = section.paragraphs.find(p => p.id === sourceSegment.paragraphId);
+  if (!sourcePara) {
+    return { success: false, pages, linesMoved: 0 };
+  }
+
+  // Check if we can split this paragraph
+  if (!canSplitParagraph(sourcePara)) {
+    // Try moving whole paragraph if it's small enough
+    if (sourcePara.lines.length <= linesNeeded) {
+      // Would implement whole paragraph move here
+      // Complex: requires rebuilding both pages
+    }
+    return { success: false, pages, linesMoved: 0 };
+  }
+
+  // Get valid split points
+  const splitPoints = getSplitPoints(sourcePara, config.sectionBalancing);
+  if (splitPoints.length === 0) {
+    return { success: false, pages, linesMoved: 0 };
+  }
+
+  // Find best split point (closest to linesNeeded)
+  let bestSplit = splitPoints[0] as number; // Safe: splitPoints.length > 0
+  let bestDiff = Math.abs(bestSplit - linesNeeded);
+  for (const sp of splitPoints) {
+    const diff = Math.abs(sp - linesNeeded);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      bestSplit = sp;
+    }
+  }
+
+  // Split the paragraph
+  const { before, after } = splitParagraph(sourcePara, bestSplit);
+
+  // Full implementation would require:
+  // 1. Append 'before' lines to current page's left column
+  // 2. Replace source paragraph in next page with 'after'
+  // 3. Rebuild segments and heights for both pages
+  // 4. Re-run stageA on both pages
+  // This is complex and deferred for now
+  void before;
+  void after;
+  
+  return { success: false, pages, linesMoved: 0 };
+}
+
+/**
+ * Try to push lines from current page's tall column to next page.
+ * Identifies splittable paragraphs at end of tall column.
+ */
+function tryPushToNextPage(
+  pages: SectionPage[],
+  pageIndex: number,
+  linesNeeded: number,
+  section: LayoutSection,
+  config: SectionLayoutConfig
+): { success: boolean; pages: SectionPage[]; linesMoved: number } {
+  const currentPage = pages[pageIndex];
+  const nextPage = pages[pageIndex + 1];
+  if (!currentPage || !nextPage) {
+    return { success: false, pages, linesMoved: 0 };
+  }
+
+  // Try to push from current page's right column (taller column)
+  const sourceSegments = currentPage.rightColumn.segments;
+  if (sourceSegments.length === 0) {
+    return { success: false, pages, linesMoved: 0 };
+  }
+
+  // Try last segment in right column
+  const lastSegment = sourceSegments[sourceSegments.length - 1];
+  if (!lastSegment) {
+    return { success: false, pages, linesMoved: 0 };
+  }
+
+  const sourcePara = section.paragraphs.find(p => p.id === lastSegment.paragraphId);
+  if (!sourcePara) {
+    return { success: false, pages, linesMoved: 0 };
+  }
+
+  // Check if we can split
+  if (!canSplitParagraph(sourcePara)) {
+    return { success: false, pages, linesMoved: 0 };
+  }
+
+  const splitPoints = getSplitPoints(sourcePara, config.sectionBalancing);
+  if (splitPoints.length === 0) {
+    return { success: false, pages, linesMoved: 0 };
+  }
+
+  // Find split point that moves approximately linesNeeded to next page
+  const targetSplit = sourcePara.lines.length - linesNeeded;
+  let bestSplit = splitPoints[0] as number; // Safe: splitPoints.length > 0
+  let bestDiff = Math.abs(bestSplit - targetSplit);
+  for (const sp of splitPoints) {
+    const diff = Math.abs(sp - targetSplit);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      bestSplit = sp;
+    }
+  }
+
+  // Split the paragraph
+  const { before, after } = splitParagraph(sourcePara, bestSplit);
+
+  // Full implementation would require:
+  // 1. Replace last segment in current page with 'before'
+  // 2. Prepend 'after' lines to next page's right column
+  // 3. Rebuild segments and heights for both pages
+  // 4. Re-run stageA on both pages
+  void before;
+  void after;
+  
+  return { success: false, pages, linesMoved: 0 };
+}
+
+/**
+ * Try to pull lines from a distant page (2-5 pages ahead).
+ * Would require rippling content through intermediate pages.
+ */
+function tryPullFromDistantPage(
+  pages: SectionPage[],
+  pageIndex: number,
+  offset: number,
+  linesNeeded: number,
+  section: LayoutSection,
+  config: SectionLayoutConfig
+): { success: boolean; pages: SectionPage[]; linesMoved: number } {
+  const targetPageIndex = pageIndex + offset;
+  if (targetPageIndex >= pages.length) {
+    return { success: false, pages, linesMoved: 0 };
+  }
+
+  // Similar logic to tryPullFromNextPage but from farther page
+  // Would need to ripple content through intermediate pages
+  // Complex implementation deferred
+  void linesNeeded;
+  void section;
+  void config;
+  
+  return { success: false, pages, linesMoved: 0 };
+}
+
+/**
+ * Try to push lines to the previous page.
+ * Requires checking previous page has capacity.
+ */
+function tryPushToPreviousPage(
+  pages: SectionPage[],
+  pageIndex: number,
+  linesNeeded: number,
+  section: LayoutSection,
+  config: SectionLayoutConfig
+): { success: boolean; pages: SectionPage[]; linesMoved: number } {
+  if (pageIndex === 0) {
+    return { success: false, pages, linesMoved: 0 };
+  }
+
+  // Similar logic to tryPushToNextPage but to previous page
+  // Would need to check previous page has capacity
+  void linesNeeded;
+  void section;
+  void config;
+  
+  return { success: false, pages, linesMoved: 0 };
 }
