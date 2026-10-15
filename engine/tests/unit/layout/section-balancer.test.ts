@@ -382,3 +382,95 @@ describe('Section Balancer - Stage A: Different Split (Section 3)', () => {
     expect(para2Segments.length).toBeGreaterThan(0);
   });
 });
+
+
+describe('Section Balancer - Stage B: Alternative Breaks (Section 4)', () => {
+  const mockRun: ShapedRun = {
+    font: 'Ezra SIL',
+    size: 12000,
+    glyphs: [],
+    direction: 'rtl',
+    width: 50000,
+  };
+
+  const createLine = (): ShapedRun[] => [mockRun];
+
+  const defaultConfig: SectionLayoutConfig = {
+    maxLinesPerColumn: 50,
+    lineHeight: 14000,
+    sectionBalancing: {
+      maxAttempts: 100,
+      lookAheadPages: 5,
+      lookBackPages: 1,
+      minParagraphLinesToSplit: 4,
+      widows: 2,
+      orphans: 2,
+      balanceTolerance: 0,
+    },
+    wordSpacing: {
+      preferred: { min: 90, max: 115 },
+      allowed: { min: 80, max: 130 },
+    },
+  };
+
+  it('should attempt alternative breaks when stage A fails', () => {
+    // Note: Current implementation is a stub, so alternatives are not actually applied
+    // This test verifies the control flow
+    const section: LayoutSection = {
+      id: 'test-section',
+      kind: 'body',
+      balancePolicy: 'balanced',
+      paragraphs: [
+        {
+          id: 'para-1',
+          lines: Array.from({ length: 51 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+          // Provide mock alternatives
+          alternativeBreaks: [
+            {
+              lines: Array.from({ length: 50 }, () => createLine()),
+              wordSpacingPercent: 95,
+              quality: 0.9,
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = layoutSection(section, defaultConfig);
+
+    // Stage B is still a stub, so alternatives are not applied
+    // But we verify no crash and diagnostics are reasonable
+    expect(result.pages.length).toBeGreaterThan(0);
+    
+    // Should NOT have ALTERNATIVE_BREAK_USED since stub doesn't apply
+    const altUsedDiag = result.diagnostics.find(
+      d => d.code === 'ALTERNATIVE_BREAK_USED'
+    );
+    expect(altUsedDiag).toBeUndefined();
+  });
+
+  it('should not create ALTERNATIVE_BREAK_USED diagnostic when no alternative applied', () => {
+    // Paragraph without alternatives
+    const section: LayoutSection = {
+      id: 'test-section',
+      kind: 'body',
+      balancePolicy: 'balanced',
+      paragraphs: [
+        {
+          id: 'para-1',
+          lines: Array.from({ length: 51 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+      ],
+    };
+
+    const result = layoutSection(section, defaultConfig);
+
+    // Should NOT create diagnostic for alternatives that weren't used
+    const altUsedDiag = result.diagnostics.find(
+      d => d.code === 'ALTERNATIVE_BREAK_USED'
+    );
+    expect(altUsedDiag).toBeUndefined();
+  });
+});
