@@ -22,10 +22,10 @@ import {
 export interface SectionPage {
   /** Page index within section */
   pageIndex: number;
-  /** Right column lines */
-  rightColumn: ShapedRun[][];
-  /** Left column lines */
-  leftColumn: ShapedRun[][];
+  /** Right column content with paragraph tracking */
+  rightColumn: ColumnContent;
+  /** Left column content with paragraph tracking */
+  leftColumn: ColumnContent;
   /** Right column height (in lineHeight units) */
   rightHeight: number;
   /** Left column height (in lineHeight units) */
@@ -34,8 +34,28 @@ export interface SectionPage {
   isBalanced: boolean;
   /** Bottom delta (absolute difference in heights) */
   bottomDelta: number;
-  /** Paragraphs on this page */
+  /** Paragraphs that appear on this page */
   paragraphs: LayoutParagraph[];
+}
+
+/** Column content with paragraph tracking */
+export interface ColumnContent {
+  /** Paragraph segments in this column */
+  segments: ParagraphSegment[];
+  /** All lines in this column (for backwards compatibility) */
+  lines: ShapedRun[][];
+}
+
+/** Paragraph segment within a column */
+export interface ParagraphSegment {
+  /** Paragraph ID */
+  paragraphId: string;
+  /** First line index in paragraph (0-indexed) */
+  firstLine: number;
+  /** Last line index in paragraph (0-indexed, inclusive) */
+  lastLine: number;
+  /** Lines from this paragraph in this column */
+  lines: ShapedRun[][];
 }
 
 /** Section layout result */
@@ -178,24 +198,107 @@ function createPageFromLines(
   config: SectionLayoutConfig
 ): SectionPage {
   const maxLinesPerColumn = config.maxLinesPerColumn;
-  const rightColumn = lines.slice(0, maxLinesPerColumn);
-  const leftColumn = lines.slice(maxLinesPerColumn);
+  const rightLines = lines.slice(0, maxLinesPerColumn);
+  const leftLines = lines.slice(maxLinesPerColumn);
 
-  const rightHeight = rightColumn.length;
-  const leftHeight = leftColumn.length;
+  // Build segments for right column
+  const rightSegments = buildSegments(rightLines, paragraphs, 0);
+  
+  // Build segments for left column
+  const leftSegments = buildSegments(leftLines, paragraphs, rightLines.length);
+
+  const rightHeight = rightLines.length;
+  const leftHeight = leftLines.length;
   const bottomDelta = Math.abs(rightHeight - leftHeight) * config.lineHeight;
   const isBalanced = bottomDelta <= config.sectionBalancing.balanceTolerance;
 
   return {
     pageIndex,
-    rightColumn,
-    leftColumn,
+    rightColumn: {
+      segments: rightSegments,
+      lines: rightLines,
+    },
+    leftColumn: {
+      segments: leftSegments,
+      lines: leftLines,
+    },
     rightHeight,
     leftHeight,
     isBalanced,
     bottomDelta,
     paragraphs,
   };
+}
+
+/**
+ * Build paragraph segments from lines.
+ * Maps lines back to their source paragraphs.
+ */
+function buildSegments(
+  columnLines: ShapedRun[][],
+  allParagraphs: LayoutParagraph[],
+  globalLineOffset: number
+): ParagraphSegment[] {
+  const segments: ParagraphSegment[] = [];
+  
+  // Track which paragraph each line belongs to
+  let currentParagraphId: string | null = null;
+  let segmentStart = 0;
+  let paragraphLineOffset = 0;
+
+  // Build a map of global line index to paragraph
+  const lineMap = new Map<number, { paragraph: LayoutParagraph; lineInParagraph: number }>();
+  let globalLine = 0;
+  for (const para of allParagraphs) {
+    for (let i = 0; i < para.lines.length; i++) {
+      lineMap.set(globalLine, { paragraph: para, lineInParagraph: i });
+      globalLine++;
+    }
+  }
+
+  for (let i = 0; i < columnLines.length; i++) {
+    const globalIndex = globalLineOffset + i;
+    const mapping = lineMap.get(globalIndex);
+    
+    if (!mapping) continue;
+
+    const { paragraph, lineInParagraph } = mapping;
+
+    if (currentParagraphId !== paragraph.id) {
+      // Starting a new paragraph segment
+      if (currentParagraphId !== null) {
+        // Save the previous segment
+        const prevMapping = lineMap.get(globalLineOffset + segmentStart);
+        if (prevMapping) {
+          segments.push({
+            paragraphId: currentParagraphId,
+            firstLine: paragraphLineOffset,
+            lastLine: lineInParagraph - 1,
+            lines: columnLines.slice(segmentStart, i),
+          });
+        }
+      }
+      
+      currentParagraphId = paragraph.id;
+      segmentStart = i;
+      paragraphLineOffset = lineInParagraph;
+    }
+  }
+
+  // Add the last segment
+  if (currentParagraphId !== null && columnLines.length > segmentStart) {
+    const lastMapping = lineMap.get(globalLineOffset + columnLines.length - 1);
+    if (lastMapping) {
+      segments.push({
+        paragraphId: currentParagraphId,
+        firstLine: paragraphLineOffset,
+        lastLine: lastMapping.lineInParagraph,
+        lines: columnLines.slice(segmentStart),
+      });
+    }
+  }
+
+  return segments;
 }
 
 /**
@@ -307,7 +410,7 @@ function stageA_DifferentSplit(
   const page = pages[pageIndex];
   if (!page) return { pages, balanced: false };
 
-  const totalLines = page.rightColumn.length + page.leftColumn.length;
+  const totalLines = page.rightColumn.lines.length + page.leftColumn.lines.length;
   const maxLinesPerColumn = config.maxLinesPerColumn;
 
   // Determine search range
@@ -342,16 +445,26 @@ function stageA_DifferentSplit(
   }
 
   // Apply best split
-  const allLines = [...page.rightColumn, ...page.leftColumn];
-  const newRightColumn = allLines.slice(0, bestSplit);
-  const newLeftColumn = allLines.slice(bestSplit);
+  const allLines = [...page.rightColumn.lines, ...page.leftColumn.lines];
+  const newRightLines = allLines.slice(0, bestSplit);
+  const newLeftLines = allLines.slice(bestSplit);
+
+  // Rebuild segments for new split
+  const newRightSegments = buildSegments(newRightLines, page.paragraphs, 0);
+  const newLeftSegments = buildSegments(newLeftLines, page.paragraphs, newRightLines.length);
 
   const newPage: SectionPage = {
     ...page,
-    rightColumn: newRightColumn,
-    leftColumn: newLeftColumn,
-    rightHeight: newRightColumn.length,
-    leftHeight: newLeftColumn.length,
+    rightColumn: {
+      segments: newRightSegments,
+      lines: newRightLines,
+    },
+    leftColumn: {
+      segments: newLeftSegments,
+      lines: newLeftLines,
+    },
+    rightHeight: newRightLines.length,
+    leftHeight: newLeftLines.length,
     bottomDelta: bestDelta,
     isBalanced: bestDelta <= config.sectionBalancing.balanceTolerance,
   };

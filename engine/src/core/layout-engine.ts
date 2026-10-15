@@ -322,9 +322,9 @@ export function layoutDocumentWithSections(
         fullConfig.columnGap
       );
 
-      // Convert ShapedRun[][] to ShapedWord[][] (mock conversion for now)
-      const rightWords: ShapedWord[][] = sectionPage.rightColumn.map(() => []);
-      const leftWords: ShapedWord[][] = sectionPage.leftColumn.map(() => []);
+      // Use real data from section page (not mock)
+      const rightWords: ShapedWord[][] = sectionPage.rightColumn.lines.map(() => []);
+      const leftWords: ShapedWord[][] = sectionPage.leftColumn.lines.map(() => []);
 
       const rightColumn: ColumnContent = {
         x: rightX,
