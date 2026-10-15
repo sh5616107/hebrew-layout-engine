@@ -143,7 +143,7 @@ doc.addContent('ET');  // End text
 Can PDFKit render glyphs at exact HarfBuzz coordinates without forking?
 
 ### Method
-**Tool:** `tools/render-glyphs-directly.ts`  
+**Tool:** `tools/render-glyphs-directly.ts` - **הכלי הוסר בקומיט 378c4ec**  
 **Test:** Attempt to write PDF operators directly using PDFKit's API  
 **Text:** "בְּרֵאשִׁית בָּרָא" (15 glyphs with nikud)
 
@@ -264,7 +264,7 @@ Glyph-level rendering should be considered when:
 **Evidence files:**
 - `out/glyph-render-test.pdf` - glyph-level rendering feasibility test
 - `out/rendering-alternatives.json` - width deviation measurement (100 words)
-- `tools/render-glyphs-directly.ts` - addContent() API investigation
+- `tools/render-glyphs-directly.ts` - **הכלי הוסר בקומיט 378c4ec**
 - `tools/compare-rendering-alternatives.ts` - width measurement tool
 - `docs/M0-ADR-004-GLYPH-RENDERING-FINDINGS.md` - detailed investigation report
 

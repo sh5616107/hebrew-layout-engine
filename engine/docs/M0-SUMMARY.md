@@ -59,7 +59,7 @@ JSON Input → Shaping (HarfBuzz) → Line Breaking → Two-Column Layout → PD
 **Tools:**
 - `tools/check-y-offsets.ts` - Visual nikud/te'amim validation
 - `tools/compare-rendering-alternatives.ts` - Width deviation measurement
-- `tools/render-glyphs-directly.ts` - Glyph-level rendering feasibility
+- `tools/render-glyphs-directly.ts` - **הכלי הוסר בקומיט 378c4ec**
 
 ### 4. Documentation ✅
 

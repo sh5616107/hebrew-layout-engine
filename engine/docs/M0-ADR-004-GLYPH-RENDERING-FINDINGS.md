@@ -34,7 +34,7 @@ doc.addContent('ET');                       // End text object
 ## Test Results
 
 ### Test Tool
-**File:** `tools/render-glyphs-directly.ts`
+**File:** `tools/render-glyphs-directly.ts` - **הכלי הוסר בקומיט 378c4ec**
 
 **Text:** "בְּרֵאשִׁית בָּרָא" (15 glyphs total)
 
@@ -159,7 +159,7 @@ const yPt = (yOffset / 64) * (fontSize / 1000);
 
 ## Evidence
 
-**Tool:** `tools/render-glyphs-directly.ts`  
+**Tool:** `tools/render-glyphs-directly.ts` - **הכלי הוסר בקומיט 378c4ec**  
 **Output:** `out/glyph-render-test.pdf`  
 **Test passed:** ✓ addContent() executed without error  
 **Visual verification:** Pending (need PDF→PNG conversion for inspection)
