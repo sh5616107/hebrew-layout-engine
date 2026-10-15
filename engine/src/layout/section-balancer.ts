@@ -392,21 +392,14 @@ function stageB_AlternativeBreaks(
 
     const best = selectBestAlternative(result.alternatives, paragraph.lines.length, targetLineDelta);
     if (best && best.lines.length !== paragraph.lines.length) {
-      // Alternative helps, but we need to reconstruct the page
-      // For now, just record that we tried
-      diagnostics.push({
-        code: 'ALTERNATIVE_BREAK_USED',
-        severity: 'info',
-        sectionId: section.id,
-        paragraphId: paragraph.id,
-        stableKey: `${section.id}:${paragraph.id}:ALTERNATIVE_BREAK_USED`,
-        message: `Used alternative break with ${best.wordSpacingPercent}% spacing`,
-        pageIndex,
-      });
+      // Alternative helps - we would need to reconstruct the page
+      // TODO: Apply the alternative in real implementation
+      // For now, don't create diagnostic until we actually apply it
     }
   }
 
   // For now, return not balanced (mock implementation)
+  // TODO: Real implementation will apply alternatives and rebuild page
   return { pages, balanced: false, diagnostics };
 }
 
@@ -465,6 +458,7 @@ function stageD_MoveLinesBetweenPages(
   const lookBack = config.sectionBalancing.lookBackPages;
 
   let attempts = 0;
+  const linesMoved = 0; // TODO: increment when lines are actually moved in real implementation
   const currentPages = [...pages];
 
   while (attempts < maxAttempts) {
@@ -475,6 +469,17 @@ function stageD_MoveLinesBetweenPages(
 
     // Check if balanced
     if (page.isBalanced) {
+      // Only create diagnostic if we actually moved lines
+      if (linesMoved > 0) {
+        diagnostics.push({
+          code: 'LINES_MOVED_BETWEEN_PAGES',
+          severity: 'info',
+          sectionId: section.id,
+          stableKey: `${section.id}:section:LINES_MOVED_BETWEEN_PAGES`,
+          message: `Moved ${linesMoved} lines across pages for balancing`,
+          pageIndex,
+        });
+      }
       return { pages: currentPages, balanced: true, diagnostics };
     }
 
@@ -482,37 +487,43 @@ function stageD_MoveLinesBetweenPages(
     if (pageIndex + 1 < currentPages.length) {
       // Try pulling lines (simplified)
       // Real implementation would handle paragraph splitting
+      // linesMoved += actualMoves;
     }
 
     // Strategy 2: Push to next page
     if (pageIndex + 1 < currentPages.length) {
       // Try pushing lines (simplified)
+      // linesMoved += actualMoves;
     }
 
     // Strategy 3: Look ahead (2-5 pages)
     for (let offset = 2; offset <= lookAhead; offset++) {
       if (pageIndex + offset >= currentPages.length) break;
       // Try moving content (simplified)
+      // linesMoved += actualMoves;
     }
 
     // Strategy 4: Look back (1 page)
     if (pageIndex - lookBack >= 0) {
       // Try moving content back (simplified)
+      // linesMoved += actualMoves;
     }
 
     // If no progress, break
     break;
   }
 
-  // Record that we tried moving lines (section-level diagnostic, not page-specific)
-  diagnostics.push({
-    code: 'LINES_MOVED_BETWEEN_PAGES',
-    severity: 'info',
-    sectionId: section.id,
-    stableKey: `${section.id}:section:LINES_MOVED_BETWEEN_PAGES`,
-    message: `Attempted ${attempts} line movements for balancing`,
-    pageIndex,
-  });
+  // Only create diagnostic if we actually moved lines
+  if (linesMoved > 0) {
+    diagnostics.push({
+      code: 'LINES_MOVED_BETWEEN_PAGES',
+      severity: 'info',
+      sectionId: section.id,
+      stableKey: `${section.id}:section:LINES_MOVED_BETWEEN_PAGES`,
+      message: `Moved ${linesMoved} lines across pages (did not achieve balance)`,
+      pageIndex,
+    });
+  }
 
   return { pages: currentPages, balanced: false, diagnostics };
 }
