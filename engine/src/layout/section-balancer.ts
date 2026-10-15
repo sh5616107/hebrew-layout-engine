@@ -8,6 +8,7 @@ import type {
   LayoutParagraph,
   SectionDiagnostic,
   ShapedRun,
+  LineBreakAlternative,
 } from '../core/types.js';
 import type {
   SectionBalancingConfig,
@@ -492,27 +493,99 @@ function stageB_AlternativeBreaks(
   const currentDelta = page.rightHeight - page.leftHeight;
   const targetLineDelta = -Math.sign(currentDelta);
 
+  // Track if any alternative was applied
+  let alternativeApplied = false;
+  const modifiedParagraphs = new Map<string, LayoutParagraph>();
+
   // Try alternatives for each paragraph on page
   for (const paragraph of page.paragraphs) {
-    const result = generateAlternativeBreaks(paragraph, {
-      spacingConfig: config.wordSpacing,
-      targetLineDelta,
-      sectionId: section.id,
-      paragraphId: paragraph.id,
-    });
+    // Use provided alternatives if available, otherwise generate
+    let alternatives: LineBreakAlternative[];
+    let generatedDiagnostics: SectionDiagnostic[] = [];
 
-    diagnostics.push(...result.diagnostics);
+    if (paragraph.alternativeBreaks && paragraph.alternativeBreaks.length > 0) {
+      // Use pre-generated alternatives
+      alternatives = paragraph.alternativeBreaks;
+    } else {
+      // Generate alternatives on the fly
+      const result = generateAlternativeBreaks(paragraph, {
+        spacingConfig: config.wordSpacing,
+        targetLineDelta,
+        sectionId: section.id,
+        paragraphId: paragraph.id,
+      });
+      alternatives = result.alternatives;
+      generatedDiagnostics = result.diagnostics;
+    }
 
-    const best = selectBestAlternative(result.alternatives, paragraph.lines.length, targetLineDelta);
+    diagnostics.push(...generatedDiagnostics);
+
+    const best = selectBestAlternative(alternatives, paragraph.lines.length, targetLineDelta);
     if (best && best.lines.length !== paragraph.lines.length) {
-      // Alternative helps - we would need to reconstruct the page
-      // TODO: Apply the alternative in real implementation
-      // For now, don't create diagnostic until we actually apply it
+      // Alternative would help - store it for application
+      modifiedParagraphs.set(paragraph.id, {
+        ...paragraph,
+        lines: best.lines,
+      });
+
+      // Create diagnostic for applied alternative
+      diagnostics.push({
+        code: 'ALTERNATIVE_BREAK_USED',
+        severity: 'info',
+        sectionId: section.id,
+        paragraphId: paragraph.id,
+        stableKey: `${section.id}:${paragraph.id}:ALTERNATIVE_BREAK_USED`,
+        message: `Used alternative break with ${best.wordSpacingPercent}% spacing`,
+        pageIndex,
+      });
+
+      alternativeApplied = true;
     }
   }
 
-  // For now, return not balanced (mock implementation)
-  // TODO: Real implementation will apply alternatives and rebuild page
+  // If alternatives were selected, rebuild pages with modified paragraphs
+  if (alternativeApplied) {
+    // Create updated section with modified paragraphs
+    const updatedParagraphs = section.paragraphs.map(p => 
+      modifiedParagraphs.get(p.id) ?? p
+    );
+
+    const updatedSection: LayoutSection = {
+      ...section,
+      paragraphs: updatedParagraphs,
+    };
+
+    // Rebuild pages from scratch with modified paragraphs
+    const rebuiltPages = initialFill(updatedSection, config);
+
+    // Re-apply Stage A to the rebuilt pages
+    const rebalancedPages: SectionPage[] = [];
+    for (let i = 0; i < rebuiltPages.length; i++) {
+      const rebuildPage = rebuiltPages[i];
+      if (!rebuildPage) continue;
+
+      const isLastPage = i === rebuiltPages.length - 1;
+      const needsBalance = (isLastPage || updatedSection.balancePolicy === 'balanced') && !rebuildPage.isBalanced;
+
+      if (needsBalance) {
+        const resultA = stageA_DifferentSplit([rebuildPage], 0, config, isLastPage);
+        rebalancedPages.push(resultA.pages[0] ?? rebuildPage);
+      } else {
+        rebalancedPages.push(rebuildPage);
+      }
+    }
+
+    // Check if target page is now balanced
+    const newPage = rebalancedPages[pageIndex];
+    if (newPage && newPage.isBalanced) {
+      return { pages: rebalancedPages, balanced: true, diagnostics };
+    }
+
+    // Alternative helped but didn't fully balance - return updated pages
+    return { pages: rebalancedPages, balanced: false, diagnostics };
+  }
+
+  // No alternatives helped
   return { pages, balanced: false, diagnostics };
 }
 
