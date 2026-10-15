@@ -249,3 +249,136 @@ describe('Section Balancer - Real Page Model (Section 2)', () => {
     }
   });
 });
+
+
+describe('Section Balancer - Stage A: Different Split (Section 3)', () => {
+  const mockRun: ShapedRun = {
+    font: 'Ezra SIL',
+    size: 12000,
+    glyphs: [],
+    direction: 'rtl',
+    width: 50000,
+  };
+
+  const createLine = (): ShapedRun[] => [mockRun];
+
+  const defaultConfig: SectionLayoutConfig = {
+    maxLinesPerColumn: 50,
+    lineHeight: 14000,
+    sectionBalancing: {
+      maxAttempts: 100,
+      lookAheadPages: 5,
+      lookBackPages: 1,
+      minParagraphLinesToSplit: 4,
+      widows: 2,
+      orphans: 2,
+      balanceTolerance: 0,
+    },
+    wordSpacing: {
+      preferred: { min: 90, max: 115 },
+      allowed: { min: 80, max: 130 },
+    },
+  };
+
+  it('should balance page using different split point in stage A', () => {
+    // Create a section with content that can be balanced by splitting differently
+    // 51 lines total: initially 26+25 (delta=1*14000=14000 mpt)
+    // Best split: 25+26 or 26+25 (delta minimized)
+    const section: LayoutSection = {
+      id: 'test-section',
+      kind: 'body',
+      balancePolicy: 'balanced',
+      paragraphs: [
+        {
+          id: 'para-1',
+          lines: Array.from({ length: 51 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+      ],
+    };
+
+    const result = layoutSection(section, defaultConfig);
+
+    // Should have one page (51 lines fit in one page with maxLinesPerColumn=50)
+    expect(result.pages.length).toBe(1);
+    
+    const page = result.pages[0];
+    if (!page) {
+      throw new Error('Page is undefined');
+    }
+
+    // Check that split was attempted
+    expect(page.rightColumn.lines.length + page.leftColumn.lines.length).toBe(51);
+    
+    // In last page of section, all splits are tried, so perfect balance should be achieved
+    // With 51 lines, best split is 26+25 or 25+26 (delta = 1 line = 14000 mpt)
+    expect(page.bottomDelta).toBeLessThanOrEqual(14000);
+  });
+
+  it('should search all splits for last page of section', () => {
+    // Last page must try all possible splits
+    const section: LayoutSection = {
+      id: 'test-section',
+      kind: 'body',
+      balancePolicy: 'balanced',
+      paragraphs: [
+        {
+          id: 'para-1',
+          lines: Array.from({ length: 20 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+      ],
+    };
+
+    const result = layoutSection(section, defaultConfig);
+
+    const page = result.pages[0];
+    if (!page) {
+      throw new Error('Page is undefined');
+    }
+
+    // With 20 lines, perfect balance is 10+10 (delta = 0)
+    expect(page.isBalanced).toBe(true);
+    expect(page.bottomDelta).toBe(0);
+  });
+
+  it('should respect paragraph boundaries when splitting', () => {
+    const section: LayoutSection = {
+      id: 'test-section',
+      kind: 'body',
+      balancePolicy: 'balanced',
+      paragraphs: [
+        {
+          id: 'para-1',
+          lines: Array.from({ length: 10 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+        {
+          id: 'para-2',
+          lines: Array.from({ length: 10 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+      ],
+    };
+
+    const result = layoutSection(section, defaultConfig);
+
+    const page = result.pages[0];
+    if (!page) {
+      throw new Error('Page is undefined');
+    }
+
+    // Segments should reference correct paragraphs
+    const allSegments = [
+      ...page.rightColumn.segments,
+      ...page.leftColumn.segments,
+    ];
+
+    // Should have segments from both paragraphs
+    const para1Segments = allSegments.filter(s => s.paragraphId === 'para-1');
+    const para2Segments = allSegments.filter(s => s.paragraphId === 'para-2');
+
+    expect(para1Segments.length).toBeGreaterThan(0);
+    expect(para2Segments.length).toBeGreaterThan(0);
+  });
+});
