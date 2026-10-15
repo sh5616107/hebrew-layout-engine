@@ -64,8 +64,8 @@ describe('Section Balancing Integration', () => {
 
       expect(result.pages).toHaveLength(1);
       // Last page must be balanced (hard constraint), so 10 lines → 5+5
-      expect(result.pages[0]?.rightColumn).toHaveLength(5);
-      expect(result.pages[0]?.leftColumn).toHaveLength(5);
+      expect(result.pages[0]?.rightColumn.lines).toHaveLength(5);
+      expect(result.pages[0]?.leftColumn.lines).toHaveLength(5);
     });
 
     it('should balance last page of section', () => {
@@ -83,8 +83,8 @@ describe('Section Balancing Integration', () => {
       const page = result.pages[0];
       expect(page).toBeDefined();
       if (page) {
-        expect(page.rightColumn.length).toBe(10);
-        expect(page.leftColumn.length).toBe(10);
+        expect(page.rightColumn.lines.length).toBe(10);
+        expect(page.leftColumn.lines.length).toBe(10);
         expect(page.isBalanced).toBe(true);
       }
     });
@@ -121,8 +121,8 @@ describe('Section Balancing Integration', () => {
         expect(firstPage).toBeDefined();
         // First page should be full (20+20)
         if (firstPage) {
-          expect(firstPage.rightColumn.length).toBe(20);
-          expect(firstPage.leftColumn.length).toBe(20);
+          expect(firstPage.rightColumn.lines.length).toBe(20);
+          expect(firstPage.leftColumn.lines.length).toBe(20);
         }
       }
     });
@@ -143,7 +143,7 @@ describe('Section Balancing Integration', () => {
       expect(page).toBeDefined();
       if (page) {
         // 30 lines should balance 15+15
-        expect(Math.abs(page.rightColumn.length - page.leftColumn.length)).toBeLessThanOrEqual(1);
+        expect(Math.abs(page.rightColumn.lines.length - page.leftColumn.lines.length)).toBeLessThanOrEqual(1);
       }
     });
   });
