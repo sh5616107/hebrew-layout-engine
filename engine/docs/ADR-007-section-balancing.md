@@ -349,20 +349,25 @@ interface WordSpacingConfig {
 
 ```
 defaultSpacing = config.paragraphSpacing  // ברירת מחדל: L (lineHeight)
-maxAdditionalSpacing = 2.0 * defaultSpacing  // תוספת מקסימלית (לא סך הכול)
+maxParagraphSpacingMultiplier = 2.0  // כפל מקסימלי של ברירת המחדל
+
+// עם ברירת מחדל של L אחת:
+// maxTotalSpacing = 2.0 * L = 2L (סך הכול)
+// maxAdditionalSpacing = 2L - L = L אחת (תוספת)
 
 // קבע לאיזה טור להוסיף ריווח (הקצר יותר)
 shorterColumn = אם rightColumnHeight < leftColumnHeight אז right אחרת left
 delta = abs(rightColumnHeight - leftColumnHeight)
 
 // נסה להוסיף ריווח במכפלות של lineHeight
-עבור multiplier ב-[1, 2]:  // מוסיף L או 2L
+// עם maxParagraphSpacingMultiplier=2 וברירת מחדל L, נסה להוסיף עד L אחת
+maxAdditionalLines = (maxParagraphSpacingMultiplier - 1.0) * (defaultSpacing / lineHeight)
+עבור multiplier ב-[1 ... maxAdditionalLines]:
   additionalSpacing = multiplier * lineHeight
   
-  אם additionalSpacing <= maxAdditionalSpacing:
-    // הוסף את הריווח בין הפסקאות בטור הקצר
-    הוסף additionalSpacing בין פסקאות ב-shorterColumn
-    חשב מחדש heights
+  // הוסף את הריווח בין הפסקאות בטור הקצר
+  הוסף additionalSpacing בין פסקאות ב-shorterColumn
+  חשב מחדש heights
     
     אם abs(newRightHeight - newLeftHeight) <= balanceTolerance:
       // שמור על רשת: הריווח תמיד במכפלות של lineHeight

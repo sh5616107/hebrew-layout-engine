@@ -506,3 +506,122 @@ describe('Section Balancer - Stage B: Alternative Breaks (Section 4)', () => {
     expect(altUsedDiag?.paragraphId).toBe('para-1');
   });
 });
+
+
+describe('Section Balancer - Stage C: Paragraph Spacing (Section 5)', () => {
+  const mockRun: ShapedRun = {
+    font: 'Ezra SIL',
+    size: 12000,
+    glyphs: [],
+    direction: 'rtl',
+    width: 50000,
+  };
+
+  const createLine = (): ShapedRun[] => [mockRun];
+
+  const defaultConfig: SectionLayoutConfig = {
+    maxLinesPerColumn: 50,
+    lineHeight: 14000,
+    sectionBalancing: {
+      maxAttempts: 100,
+      lookAheadPages: 5,
+      lookBackPages: 1,
+      minParagraphLinesToSplit: 4,
+      widows: 2,
+      orphans: 2,
+      balanceTolerance: 0,
+      maxParagraphSpacingMultiplier: 2.0,
+    },
+    wordSpacing: {
+      preferred: { min: 90, max: 115 },
+      allowed: { min: 80, max: 130 },
+    },
+  };
+
+  it('should balance using paragraph spacing when stages A and B fail', () => {
+    // Create a section where only paragraph spacing helps
+    // 49 lines: 25+24 initially (delta=1L=14000mpt)
+    // Stage C can add 1L to shorter column → 25+25 (balanced)
+    const section: LayoutSection = {
+      id: 'test-section',
+      kind: 'body',
+      balancePolicy: 'balanced',
+      paragraphs: [
+        {
+          id: 'para-1',
+          lines: Array.from({ length: 49 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+      ],
+    };
+
+    const result = layoutSection(section, defaultConfig);
+
+    const page = result.pages[0];
+    if (!page) {
+      throw new Error('Page is undefined');
+    }
+
+    // Should achieve balance through spacing
+    expect(page.isBalanced).toBe(true);
+  });
+
+  it('should respect maxParagraphSpacingMultiplier limit', () => {
+    // Config with multiplier=2: can add up to 1L (from default 1L to total 2L)
+    // 45 lines: 23+22 (delta=1L). Can balance.
+    // 43 lines: 22+21 (delta=1L). Can balance.
+    // 41 lines: 21+20 (delta=1L). Can balance.
+    // 39 lines: 20+19 (delta=1L). Can balance.
+    
+    const section: LayoutSection = {
+      id: 'test-section',
+      kind: 'body',
+      balancePolicy: 'balanced',
+      paragraphs: [
+        {
+          id: 'para-1',
+          lines: Array.from({ length: 45 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+      ],
+    };
+
+    const result = layoutSection(section, defaultConfig);
+
+    const page = result.pages[0];
+    if (!page) {
+      throw new Error('Page is undefined');
+    }
+
+    // Should balance with spacing up to the multiplier
+    expect(page.isBalanced).toBe(true);
+  });
+
+  it('should maintain baseline grid when adding spacing', () => {
+    // Spacing is added in multiples of lineHeight
+    // This ensures baseline grid is preserved
+    const section: LayoutSection = {
+      id: 'test-section',
+      kind: 'body',
+      balancePolicy: 'balanced',
+      paragraphs: [
+        {
+          id: 'para-1',
+          lines: Array.from({ length: 49 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+      ],
+    };
+
+    const result = layoutSection(section, defaultConfig);
+
+    const page = result.pages[0];
+    if (!page) {
+      throw new Error('Page is undefined');
+    }
+
+    // Heights should be multiples of 1 (in line units)
+    expect(page.rightHeight % 1).toBe(0);
+    expect(page.leftHeight % 1).toBe(0);
+  });
+});

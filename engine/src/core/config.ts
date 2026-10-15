@@ -225,6 +225,8 @@ export interface SectionBalancingConfig {
   orphans: number;
   /** Balance tolerance in mpt */
   balanceTolerance: number;
+  /** Maximum paragraph spacing multiplier (proposal-for-approval: total = multiplier × default) */
+  maxParagraphSpacingMultiplier: number;
 }
 
 /** Default section balancing configuration */
@@ -236,4 +238,5 @@ export const DEFAULT_SECTION_BALANCING_CONFIG: SectionBalancingConfig = {
   widows: 2,
   orphans: 2,
   balanceTolerance: 0, // Perfect balance
+  maxParagraphSpacingMultiplier: 2.0, // proposal-for-approval: total spacing up to 2× default
 };

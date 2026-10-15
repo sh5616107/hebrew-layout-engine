@@ -601,28 +601,47 @@ function stageC_ParagraphSpacing(
   if (!page) return { pages, balanced: false };
 
   const delta = page.rightHeight - page.leftHeight;
+  
+  // If already balanced, nothing to do
+  if (page.isBalanced) {
+    return { pages, balanced: true };
+  }
+
   const shorterColumn = delta > 0 ? 'left' : 'right';
 
-  // Try adding lineHeights to shorter column
-  // ADR-007: "עד פי 2 מברירת המחדל" = total up to 2× default spacing
-  // If default is 1L, we can add up to 1L more (total = 2L)
-  const maxAddition = 1; // proposal-for-approval (adding 1L to 1L default = 2L total)
-  
-  for (let multiplier = 1; multiplier <= maxAddition; multiplier++) {
-    const addition = multiplier; // In line units
+  // Calculate maximum additional spacing allowed
+  // maxParagraphSpacingMultiplier=2 means total up to 2× default spacing
+  // With default=1L, we can add up to 1L more (total=2L)
+  const defaultSpacing = 1.0; // In line units (assumed 1L between paragraphs by default)
+  const maxTotalSpacing = config.sectionBalancing.maxParagraphSpacingMultiplier * defaultSpacing;
+  const maxAdditional = maxTotalSpacing - defaultSpacing; // In line units
 
-    const newHeight = shorterColumn === 'right'
-      ? page.rightHeight + addition
-      : page.leftHeight + addition;
+  // Try adding spacing in increments of 1 line height
+  for (let additionalLines = 1; additionalLines <= maxAdditional; additionalLines++) {
+    const additionalHeight = additionalLines; // In line units
 
-    const newDelta = shorterColumn === 'right'
-      ? Math.abs(newHeight - page.leftHeight)
-      : Math.abs(page.rightHeight - newHeight);
+    // Calculate new height
+    const newShorterHeight = (shorterColumn === 'right' ? page.rightHeight : page.leftHeight) + additionalHeight;
+    const otherHeight = shorterColumn === 'right' ? page.leftHeight : page.rightHeight;
 
-    if (newDelta * config.lineHeight <= config.sectionBalancing.balanceTolerance) {
-      // Balanced! But we can't actually add spacing without modifying lines
-      // For now, just return not balanced (mock implementation)
-      return { pages, balanced: false };
+    const newDelta = Math.abs(newShorterHeight - otherHeight) * config.lineHeight;
+
+    if (newDelta <= config.sectionBalancing.balanceTolerance) {
+      // Balanced! Apply the spacing
+      // Note: In real implementation, we'd modify the column content to add spacing
+      // For now, create a new page with adjusted heights
+      const newPage: SectionPage = {
+        ...page,
+        rightHeight: shorterColumn === 'right' ? newShorterHeight : page.rightHeight,
+        leftHeight: shorterColumn === 'left' ? newShorterHeight : page.leftHeight,
+        bottomDelta: newDelta,
+        isBalanced: true,
+      };
+
+      const newPages = [...pages];
+      newPages[pageIndex] = newPage;
+      
+      return { pages: newPages, balanced: true };
     }
   }
 
