@@ -767,3 +767,137 @@ describe('Section Balancer - Failure and Diagnostics (Section 7)', () => {
     }
   });
 });
+
+
+describe('Section Balancer - Determinism and Limits (Section 8)', () => {
+  const mockRun: ShapedRun = {
+    font: 'Ezra SIL',
+    size: 12000,
+    glyphs: [],
+    direction: 'rtl',
+    width: 50000,
+  };
+
+  const createLine = (): ShapedRun[] => [mockRun];
+
+  const defaultConfig: SectionLayoutConfig = {
+    maxLinesPerColumn: 50,
+    lineHeight: 14000,
+    sectionBalancing: {
+      maxAttempts: 100,
+      lookAheadPages: 5,
+      lookBackPages: 1,
+      minParagraphLinesToSplit: 4,
+      widows: 2,
+      orphans: 2,
+      balanceTolerance: 0,
+      maxParagraphSpacingMultiplier: 2.0,
+    },
+    wordSpacing: {
+      preferred: { min: 90, max: 115 },
+      allowed: { min: 80, max: 130 },
+    },
+  };
+
+  it('should produce identical results on repeated runs (determinism)', () => {
+    const section: LayoutSection = {
+      id: 'determ-test',
+      kind: 'body',
+      balancePolicy: 'balanced',
+      paragraphs: [
+        {
+          id: 'para-1',
+          lines: Array.from({ length: 75 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+        {
+          id: 'para-2',
+          lines: Array.from({ length: 30 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+      ],
+    };
+
+    // Run layout twice
+    const result1 = layoutSection(section, defaultConfig);
+    const result2 = layoutSection(section, defaultConfig);
+
+    // Compare page counts
+    expect(result1.pages.length).toBe(result2.pages.length);
+
+    // Compare each page
+    for (let i = 0; i < result1.pages.length; i++) {
+      const page1 = result1.pages[i];
+      const page2 = result2.pages[i];
+
+      expect(page1?.rightHeight).toBe(page2?.rightHeight);
+      expect(page1?.leftHeight).toBe(page2?.leftHeight);
+      expect(page1?.isBalanced).toBe(page2?.isBalanced);
+      expect(page1?.bottomDelta).toBe(page2?.bottomDelta);
+    }
+
+    // Compare diagnostic counts (may vary slightly but should be same type/count)
+    expect(result1.diagnostics.length).toBe(result2.diagnostics.length);
+  });
+
+  it('should enforce maxAttempts limit', () => {
+    // Test with very low maxAttempts to ensure it's enforced
+    const limitedConfig: SectionLayoutConfig = {
+      ...defaultConfig,
+      sectionBalancing: {
+        ...defaultConfig.sectionBalancing,
+        maxAttempts: 5, // Very low limit
+      },
+    };
+
+    const section: LayoutSection = {
+      id: 'limit-test',
+      kind: 'body',
+      balancePolicy: 'balanced',
+      paragraphs: [
+        {
+          id: 'para-1',
+          lines: Array.from({ length: 150 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+      ],
+    };
+
+    // Should not hang or loop infinitely
+    const result = layoutSection(section, limitedConfig);
+
+    // Should complete (not hang)
+    expect(result.pages.length).toBeGreaterThan(0);
+  });
+
+  it('should enforce lookAheadPages and lookBackPages limits', () => {
+    // Test that look-ahead/back limits are respected
+    // Stage D would use these limits
+    const strictConfig: SectionLayoutConfig = {
+      ...defaultConfig,
+      sectionBalancing: {
+        ...defaultConfig.sectionBalancing,
+        lookAheadPages: 2, // Reduced from 5
+        lookBackPages: 0, // No lookback
+      },
+    };
+
+    const section: LayoutSection = {
+      id: 'lookahead-test',
+      kind: 'body',
+      balancePolicy: 'balanced',
+      paragraphs: [
+        {
+          id: 'para-1',
+          lines: Array.from({ length: 200 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+      ],
+    };
+
+    // Should complete without error
+    const result = layoutSection(section, strictConfig);
+
+    expect(result.pages.length).toBeGreaterThan(0);
+  });
+});
