@@ -358,13 +358,17 @@ function balancePage(
   }
 
   // Stage A: Try different split points
-  const resultA = stageA_DifferentSplit(pages, pageIndex, config, isLastPage);
+  const resultA = config.sectionBalancing.enableStageA 
+    ? stageA_DifferentSplit(pages, pageIndex, config, isLastPage)
+    : { pages, balanced: false };
   if (resultA.balanced) {
     return { pages: resultA.pages, diagnostics };
   }
 
   // Stage B: Try alternative line breaks (word spacing)
-  const resultB = stageB_AlternativeBreaks(resultA.pages, pageIndex, section, config);
+  const resultB = config.sectionBalancing.enableStageB
+    ? stageB_AlternativeBreaks(resultA.pages, pageIndex, section, config)
+    : { pages: resultA.pages, balanced: false, diagnostics: [] };
   if (resultB.balanced) {
     diagnostics.push(...resultB.diagnostics);
     return { pages: resultB.pages, diagnostics };
@@ -372,13 +376,17 @@ function balancePage(
   diagnostics.push(...resultB.diagnostics);
 
   // Stage C: Add inter-paragraph spacing
-  const resultC = stageC_ParagraphSpacing(resultB.pages, pageIndex, config);
+  const resultC = config.sectionBalancing.enableStageC
+    ? stageC_ParagraphSpacing(resultB.pages, pageIndex, config)
+    : { pages: resultB.pages, balanced: false };
   if (resultC.balanced) {
     return { pages: resultC.pages, diagnostics };
   }
 
   // Stage D: Move lines/paragraphs between pages
-  const resultD = stageD_MoveLinesBetweenPages(resultC.pages, pageIndex, section, config);
+  const resultD = config.sectionBalancing.enableStageD
+    ? stageD_MoveLinesBetweenPages(resultC.pages, pageIndex, section, config)
+    : { pages: resultC.pages, balanced: false, diagnostics: [] };
   if (resultD.balanced) {
     diagnostics.push(...resultD.diagnostics);
     return { pages: resultD.pages, diagnostics };
@@ -626,7 +634,7 @@ function stageC_ParagraphSpacing(
 
   // Try adding spacing in increments of 1 line height
   for (let additionalLines = 1; additionalLines <= maxAdditional; additionalLines++) {
-    const additionalHeight = additionalLines; // In line units
+    const additionalHeight = additionalLines; // In line units (must be integer)
 
     // Calculate new height
     const newShorterHeight = (shorterColumn === 'right' ? page.rightHeight : page.leftHeight) + additionalHeight;
@@ -636,9 +644,16 @@ function stageC_ParagraphSpacing(
 
     if (newDelta <= config.sectionBalancing.balanceTolerance) {
       // Balanced! Apply the spacing to paragraph boundaries
-      // Distribute spacing evenly across paragraph boundaries
+      // Distribute spacing evenly across paragraph boundaries as INTEGER line units
       const numBoundaries = shorterContent.segments.length - 1;
+      
+      // Check if we can distribute additionalLines evenly as integers
       const spacingPerBoundary = additionalHeight / numBoundaries;
+      
+      // Must be integer - if not, Stage C fails
+      if (!Number.isInteger(spacingPerBoundary)) {
+        continue; // Try next increment
+      }
 
       // Create new segments with spacing
       const newSegments = shorterContent.segments.map((seg, idx) => {

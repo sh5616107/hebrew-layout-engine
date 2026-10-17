@@ -30,6 +30,10 @@ describe('Section Balancer - Diagnostic Accuracy (Section 1)', () => {
       widows: 2,
       orphans: 2,
       balanceTolerance: 0,
+      enableStageA: true,
+      enableStageB: true,
+      enableStageC: true,
+      enableStageD: true,
     },
     wordSpacing: {
       preferred: { min: 90, max: 115 },
@@ -273,6 +277,10 @@ describe('Section Balancer - Stage A: Different Split (Section 3)', () => {
       widows: 2,
       orphans: 2,
       balanceTolerance: 0,
+      enableStageA: true,
+      enableStageB: true,
+      enableStageC: true,
+      enableStageD: true,
     },
     wordSpacing: {
       preferred: { min: 90, max: 115 },
@@ -282,8 +290,8 @@ describe('Section Balancer - Stage A: Different Split (Section 3)', () => {
 
   it('should balance page using different split point in stage A', () => {
     // Create a section with content that can be balanced by splitting differently
-    // 51 lines total: initially 26+25 (delta=1*14000=14000 mpt)
-    // Best split: 25+26 or 26+25 (delta minimized)
+    // Use EVEN number (50 lines) so perfect balance is achievable by Stage A alone
+    // 50 lines total: best split is 25+25 (delta=0)
     const section: LayoutSection = {
       id: 'test-section',
       kind: 'body',
@@ -291,7 +299,7 @@ describe('Section Balancer - Stage A: Different Split (Section 3)', () => {
       paragraphs: [
         {
           id: 'para-1',
-          lines: Array.from({ length: 51 }, () => createLine()),
+          lines: Array.from({ length: 50 }, () => createLine()),
           style: { lastLine: 'justify', widows: 2, orphans: 2 },
         },
       ],
@@ -299,7 +307,7 @@ describe('Section Balancer - Stage A: Different Split (Section 3)', () => {
 
     const result = layoutSection(section, defaultConfig);
 
-    // Should have one page (51 lines fit in one page with maxLinesPerColumn=50)
+    // Should have one page
     expect(result.pages.length).toBe(1);
     
     const page = result.pages[0];
@@ -308,11 +316,12 @@ describe('Section Balancer - Stage A: Different Split (Section 3)', () => {
     }
 
     // Check that split was attempted
-    expect(page.rightColumn.lines.length + page.leftColumn.lines.length).toBe(51);
+    expect(page.rightColumn.lines.length + page.leftColumn.lines.length).toBe(50);
     
     // In last page of section, all splits are tried, so perfect balance should be achieved
-    // With 51 lines, best split is 26+25 or 25+26 (delta = 1 line = 14000 mpt)
-    expect(page.bottomDelta).toBeLessThanOrEqual(14000);
+    // With 50 lines (even), best split is 25+25 (delta = 0)
+    expect(page.isBalanced).toBe(true);
+    expect(page.bottomDelta).toBe(0);
   });
 
   it('should search all splits for last page of section', () => {
@@ -406,6 +415,10 @@ describe('Section Balancer - Stage B: Alternative Breaks (Section 4)', () => {
       widows: 2,
       orphans: 2,
       balanceTolerance: 0,
+      enableStageA: true,
+      enableStageB: true,
+      enableStageC: true,
+      enableStageD: true,
     },
     wordSpacing: {
       preferred: { min: 90, max: 115 },
@@ -414,7 +427,10 @@ describe('Section Balancer - Stage B: Alternative Breaks (Section 4)', () => {
   };
 
   it('should attempt alternative breaks when stage A fails', () => {
-    // Note: Now that implementation is real, alternatives ARE applied
+    // Use 3 paragraphs with ODD total (51 lines) so Stage A cannot achieve perfect balance
+    // Para1: 20, Para2: 20, Para3: 11 = 51 total
+    // Without alternatives: best split is 26+25 (delta=1L, NOT balanced with tolerance=0)
+    // With alternative on Para3 (11→10): total becomes 50, perfect balance possible
     const section: LayoutSection = {
       id: 'test-section',
       kind: 'body',
@@ -422,12 +438,22 @@ describe('Section Balancer - Stage B: Alternative Breaks (Section 4)', () => {
       paragraphs: [
         {
           id: 'para-1',
-          lines: Array.from({ length: 51 }, () => createLine()),
+          lines: Array.from({ length: 20 }, () => createLine()),
           style: { lastLine: 'justify', widows: 2, orphans: 2 },
-          // Provide mock alternatives
+        },
+        {
+          id: 'para-2',
+          lines: Array.from({ length: 20 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+        {
+          id: 'para-3',
+          lines: Array.from({ length: 11 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+          // Provide alternative that reduces by 1 line
           alternativeBreaks: [
             {
-              lines: Array.from({ length: 50 }, () => createLine()),
+              lines: Array.from({ length: 10 }, () => createLine()),
               wordSpacingPercent: 95,
               quality: 0.9,
             },
@@ -438,7 +464,7 @@ describe('Section Balancer - Stage B: Alternative Breaks (Section 4)', () => {
 
     const result = layoutSection(section, defaultConfig);
 
-    // Alternative was applied
+    // Alternative should be applied, achieving balance
     expect(result.pages.length).toBeGreaterThan(0);
     
     // Should HAVE ALTERNATIVE_BREAK_USED since alternative was applied
@@ -446,6 +472,7 @@ describe('Section Balancer - Stage B: Alternative Breaks (Section 4)', () => {
       d => d.code === 'ALTERNATIVE_BREAK_USED'
     );
     expect(altUsedDiag).toBeDefined();
+    expect(altUsedDiag?.paragraphId).toBe('para-3');
   });
 
   it('should not create ALTERNATIVE_BREAK_USED diagnostic when no alternative applied', () => {
@@ -474,7 +501,8 @@ describe('Section Balancer - Stage B: Alternative Breaks (Section 4)', () => {
 
   it('should create ALTERNATIVE_BREAK_USED diagnostic when alternative is applied', () => {
     // Create a scenario where alternative helps balance
-    // 51 lines with alternative that reduces to 50
+    // Use 3 paragraphs: 20+20+11=51 with alternative on last paragraph (11→10)
+    // Makes total=50 lines, achievable perfect balance
     const section: LayoutSection = {
       id: 'test-section',
       kind: 'body',
@@ -482,11 +510,21 @@ describe('Section Balancer - Stage B: Alternative Breaks (Section 4)', () => {
       paragraphs: [
         {
           id: 'para-1',
-          lines: Array.from({ length: 51 }, () => createLine()),
+          lines: Array.from({ length: 20 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+        {
+          id: 'para-2',
+          lines: Array.from({ length: 20 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+        {
+          id: 'para-3',
+          lines: Array.from({ length: 11 }, () => createLine()),
           style: { lastLine: 'justify', widows: 2, orphans: 2 },
           alternativeBreaks: [
             {
-              lines: Array.from({ length: 50 }, () => createLine()),
+              lines: Array.from({ length: 10 }, () => createLine()),
               wordSpacingPercent: 85,
               quality: 0.9,
             },
@@ -503,7 +541,7 @@ describe('Section Balancer - Stage B: Alternative Breaks (Section 4)', () => {
     );
     
     expect(altUsedDiag).toBeDefined();
-    expect(altUsedDiag?.paragraphId).toBe('para-1');
+    expect(altUsedDiag?.paragraphId).toBe('para-3');
   });
 });
 
@@ -532,6 +570,10 @@ describe('Section Balancer - Stage C: Paragraph Spacing (Section 5)', () => {
       balanceTolerance: 0,
       defaultParagraphSpacing: 1.0,
       maxParagraphSpacingMultiplier: 2.0,
+      enableStageA: true,
+      enableStageB: true,
+      enableStageC: true,
+      enableStageD: true,
     },
     wordSpacing: {
       preferred: { min: 90, max: 115 },
@@ -678,6 +720,10 @@ describe('Section Balancer - Failure and Diagnostics (Section 7)', () => {
       balanceTolerance: 0,
       defaultParagraphSpacing: 1.0,
       maxParagraphSpacingMultiplier: 2.0,
+      enableStageA: true,
+      enableStageB: true,
+      enableStageC: true,
+      enableStageD: true,
     },
     wordSpacing: {
       preferred: { min: 90, max: 115 },
@@ -821,6 +867,10 @@ describe('Section Balancer - Determinism and Limits (Section 8)', () => {
       balanceTolerance: 0,
       defaultParagraphSpacing: 1.0,
       maxParagraphSpacingMultiplier: 2.0,
+      enableStageA: true,
+      enableStageB: true,
+      enableStageC: true,
+      enableStageD: true,
     },
     wordSpacing: {
       preferred: { min: 90, max: 115 },

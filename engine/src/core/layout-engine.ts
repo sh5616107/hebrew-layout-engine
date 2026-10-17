@@ -288,6 +288,10 @@ export function layoutDocumentWithSections(
       balanceTolerance: fullConfig.balanceTolerance ?? 0,
       defaultParagraphSpacing: 1.0,
       maxParagraphSpacingMultiplier: 2.0, // proposal-for-approval
+      enableStageA: true,
+      enableStageB: true,
+      enableStageC: true,
+      enableStageD: true,
     },
     wordSpacing: config.wordSpacing ?? {
       preferred: { min: 90, max: 115 }, // proposal-for-approval

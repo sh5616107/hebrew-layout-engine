@@ -19,7 +19,7 @@
     "test:integration": "vitest run --dir tests/integration",
     "test:acceptance": "vitest run --dir tests/acceptance",
     "test:coverage": "vitest run --coverage",
-    "lint": "eslint src --ext .ts",
+    "lint": "eslint src tests tools --ext .ts",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "typecheck": "tsc --noEmit"
   },

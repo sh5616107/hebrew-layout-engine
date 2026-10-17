@@ -229,6 +229,14 @@ export interface SectionBalancingConfig {
   defaultParagraphSpacing: number;
   /** Maximum paragraph spacing multiplier (proposal-for-approval: total = multiplier × default) */
   maxParagraphSpacingMultiplier: number;
+  /** Enable Stage A (different split points) */
+  enableStageA: boolean;
+  /** Enable Stage B (alternative line breaks) */
+  enableStageB: boolean;
+  /** Enable Stage C (paragraph spacing) */
+  enableStageC: boolean;
+  /** Enable Stage D (line movement between pages) */
+  enableStageD: boolean;
 }
 
 /** Default section balancing configuration */
@@ -242,4 +250,8 @@ export const DEFAULT_SECTION_BALANCING_CONFIG: SectionBalancingConfig = {
   balanceTolerance: 0, // Perfect balance
   defaultParagraphSpacing: 1.0, // 1 line unit between paragraphs
   maxParagraphSpacingMultiplier: 2.0, // proposal-for-approval: total spacing up to 2× default
+  enableStageA: true,
+  enableStageB: true,
+  enableStageC: true,
+  enableStageD: true,
 };
