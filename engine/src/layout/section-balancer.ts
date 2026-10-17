@@ -62,6 +62,8 @@ export interface ParagraphSegment {
   lastLine: number;
   /** Lines from this paragraph in this column */
   lines: ShapedRun[][];
+  /** Additional spacing after this segment (in line units), default 0 */
+  spacingAfter?: number;
 }
 
 /** Section layout result */
@@ -596,6 +598,7 @@ function stageB_AlternativeBreaks(
 
 /**
  * Stage C: Add inter-paragraph spacing (multiples of lineHeight).
+ * Adds actual spacing between paragraphs in the shorter column.
  */
 function stageC_ParagraphSpacing(
   pages: SectionPage[],
@@ -613,11 +616,16 @@ function stageC_ParagraphSpacing(
   }
 
   const shorterColumn = delta > 0 ? 'left' : 'right';
+  const shorterContent = shorterColumn === 'right' ? page.rightColumn : page.leftColumn;
+
+  // Check if shorter column has paragraph boundaries (needs at least 2 segments)
+  if (shorterContent.segments.length < 2) {
+    // Cannot add inter-paragraph spacing with less than 2 segments
+    return { pages, balanced: false };
+  }
 
   // Calculate maximum additional spacing allowed
-  // maxParagraphSpacingMultiplier=2 means total up to 2× default spacing
-  // With default=1L, we can add up to 1L more (total=2L)
-  const defaultSpacing = 1.0; // In line units (assumed 1L between paragraphs by default)
+  const defaultSpacing = config.sectionBalancing.defaultParagraphSpacing; // From config
   const maxTotalSpacing = config.sectionBalancing.maxParagraphSpacingMultiplier * defaultSpacing;
   const maxAdditional = maxTotalSpacing - defaultSpacing; // In line units
 
@@ -632,13 +640,40 @@ function stageC_ParagraphSpacing(
     const newDelta = Math.abs(newShorterHeight - otherHeight) * config.lineHeight;
 
     if (newDelta <= config.sectionBalancing.balanceTolerance) {
-      // Balanced! Apply the spacing
-      // Note: In real implementation, we'd modify the column content to add spacing
-      // For now, create a new page with adjusted heights
+      // Balanced! Apply the spacing to paragraph boundaries
+      // Distribute spacing evenly across paragraph boundaries
+      const numBoundaries = shorterContent.segments.length - 1;
+      const spacingPerBoundary = additionalHeight / numBoundaries;
+
+      // Create new segments with spacing
+      const newSegments = shorterContent.segments.map((seg, idx) => {
+        if (idx < shorterContent.segments.length - 1) {
+          // Not the last segment - add spacing after it
+          return {
+            ...seg,
+            spacingAfter: (seg.spacingAfter ?? 0) + spacingPerBoundary,
+          };
+        }
+        return seg; // Last segment doesn't need spacing after
+      });
+
+      // Calculate new height from content (lines + spacing)
+      const contentHeight = shorterContent.lines.length + 
+                           newSegments.reduce((sum, seg) => sum + (seg.spacingAfter ?? 0), 0);
+
+      // Create new column content
+      const newColumnContent: ColumnContent = {
+        segments: newSegments,
+        lines: shorterContent.lines,
+      };
+
+      // Create new page with updated column
       const newPage: SectionPage = {
         ...page,
-        rightHeight: shorterColumn === 'right' ? newShorterHeight : page.rightHeight,
-        leftHeight: shorterColumn === 'left' ? newShorterHeight : page.leftHeight,
+        rightColumn: shorterColumn === 'right' ? newColumnContent : page.rightColumn,
+        leftColumn: shorterColumn === 'left' ? newColumnContent : page.leftColumn,
+        rightHeight: shorterColumn === 'right' ? contentHeight : page.rightHeight,
+        leftHeight: shorterColumn === 'left' ? contentHeight : page.leftHeight,
         bottomDelta: newDelta,
         isBalanced: true,
       };

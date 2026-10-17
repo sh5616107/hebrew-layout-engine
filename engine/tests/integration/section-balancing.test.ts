@@ -43,6 +43,8 @@ const defaultConfig: SectionLayoutConfig = {
     widows: 2,
     orphans: 2,
     balanceTolerance: 0,
+    defaultParagraphSpacing: 1.0,
+    maxParagraphSpacingMultiplier: 2.0,
   },
   wordSpacing: {
     preferred: { min: 90, max: 115 },
@@ -326,13 +328,23 @@ describe('Section Balancing Integration', () => {
     });
 
     it('Stage C: should add paragraph spacing when stages A&B fail', () => {
-      // Create scenario where split doesn't balance and no alternatives
-      // 19 lines: stage A tries 10+9 (delta=1L), stage B has no alternatives,
-      // stage C adds 1L spacing to short column
+      // Create scenario where stage A CANNOT balance perfectly
+      // Use 3 paragraphs: 7 + 6 + 7 = 20 total
+      // Only even split possible is 10+10, but with these sizes:
+      // Right: Para1(7) + Para2(3) = 10 with 1 boundary
+      // Left: Para2(3) + Para3(7) = 10 with 1 boundary
+      // This is perfect balance, so stage A succeeds.
+      // 
+      // Let's try 7 + 7 + 7 = 21 total
+      // Split: 11+10 (delta=1L), stage C should add spacing
       const section: LayoutSection = {
         id: 'stage-c-test',
         kind: 'body',
-        paragraphs: [mockParagraph('para-1', 19)],
+        paragraphs: [
+          mockParagraph('para-1', 7),
+          mockParagraph('para-2', 7),
+          mockParagraph('para-3', 7),
+        ],
         balancePolicy: 'fill',
       };
 
@@ -346,13 +358,19 @@ describe('Section Balancing Integration', () => {
 
       const result = layoutSection(section, configWithSpacing);
 
-      // 19 lines → 10+9, then add 1L to shorter column → 10+10 effective
+      // 21 lines → 11+10, stage A tries but delta=1L > tolerance
+      // Stage C adds 1L spacing → 11+11 effective
       expect(result.pages).toHaveLength(1);
       const page = result.pages[0];
       expect(page).toBeDefined();
       if (page) {
         // Stage C should succeed by adding spacing
         expect(page.isBalanced).toBe(true);
+        // Verify spacing was added to shorter column
+        const shorterColumn = page.rightHeight > page.leftHeight ? page.leftColumn : page.rightColumn;
+        // At least one segment should have spacing
+        const totalSpacing = shorterColumn.segments.reduce((sum, seg) => sum + (seg.spacingAfter ?? 0), 0);
+        expect(totalSpacing).toBeGreaterThan(0);
       }
     });
 

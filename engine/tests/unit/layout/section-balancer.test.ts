@@ -530,6 +530,7 @@ describe('Section Balancer - Stage C: Paragraph Spacing (Section 5)', () => {
       widows: 2,
       orphans: 2,
       balanceTolerance: 0,
+      defaultParagraphSpacing: 1.0,
       maxParagraphSpacingMultiplier: 2.0,
     },
     wordSpacing: {
@@ -540,8 +541,11 @@ describe('Section Balancer - Stage C: Paragraph Spacing (Section 5)', () => {
 
   it('should balance using paragraph spacing when stages A and B fail', () => {
     // Create a section where only paragraph spacing helps
-    // 49 lines: 25+24 initially (delta=1L=14000mpt)
-    // Stage C can add 1L to shorter column → 25+25 (balanced)
+    // Use 3 paragraphs so there are boundaries in both columns
+    // Para1: 20 lines, Para2: 15 lines, Para3: 14 lines = 49 total
+    // Initial split: 25+24
+    // Right: Para1(20) + Para2(5) = 25 with 1 boundary
+    // Left: Para2(10) + Para3(14) = 24 with 1 boundary
     const section: LayoutSection = {
       id: 'test-section',
       kind: 'body',
@@ -549,7 +553,17 @@ describe('Section Balancer - Stage C: Paragraph Spacing (Section 5)', () => {
       paragraphs: [
         {
           id: 'para-1',
-          lines: Array.from({ length: 49 }, () => createLine()),
+          lines: Array.from({ length: 20 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+        {
+          id: 'para-2',
+          lines: Array.from({ length: 15 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+        {
+          id: 'para-3',
+          lines: Array.from({ length: 14 }, () => createLine()),
           style: { lastLine: 'justify', widows: 2, orphans: 2 },
         },
       ],
@@ -563,15 +577,18 @@ describe('Section Balancer - Stage C: Paragraph Spacing (Section 5)', () => {
     }
 
     // Should achieve balance through spacing
+    // Initial: 25+24, stage A finds 25+24 (delta=1L)
+    // Stage B has no alternatives
+    // Stage C adds spacing at paragraph boundary in shorter column
     expect(page.isBalanced).toBe(true);
   });
 
   it('should respect maxParagraphSpacingMultiplier limit', () => {
     // Config with multiplier=2: can add up to 1L (from default 1L to total 2L)
-    // 45 lines: 23+22 (delta=1L). Can balance.
-    // 43 lines: 22+21 (delta=1L). Can balance.
-    // 41 lines: 21+20 (delta=1L). Can balance.
-    // 39 lines: 20+19 (delta=1L). Can balance.
+    // Use 3 paragraphs: 15 + 15 + 15 = 45 total
+    // Split: 23+22 (delta=1L). Can balance by adding 1L spacing.
+    // Right: Para1(15) + Para2(8) = 23 with 1 boundary
+    // Left: Para2(7) + Para3(15) = 22 with 1 boundary
     
     const section: LayoutSection = {
       id: 'test-section',
@@ -580,7 +597,17 @@ describe('Section Balancer - Stage C: Paragraph Spacing (Section 5)', () => {
       paragraphs: [
         {
           id: 'para-1',
-          lines: Array.from({ length: 45 }, () => createLine()),
+          lines: Array.from({ length: 15 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+        {
+          id: 'para-2',
+          lines: Array.from({ length: 15 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+        {
+          id: 'para-3',
+          lines: Array.from({ length: 15 }, () => createLine()),
           style: { lastLine: 'justify', widows: 2, orphans: 2 },
         },
       ],
@@ -649,6 +676,7 @@ describe('Section Balancer - Failure and Diagnostics (Section 7)', () => {
       widows: 2,
       orphans: 2,
       balanceTolerance: 0,
+      defaultParagraphSpacing: 1.0,
       maxParagraphSpacingMultiplier: 2.0,
     },
     wordSpacing: {
@@ -791,6 +819,7 @@ describe('Section Balancer - Determinism and Limits (Section 8)', () => {
       widows: 2,
       orphans: 2,
       balanceTolerance: 0,
+      defaultParagraphSpacing: 1.0,
       maxParagraphSpacingMultiplier: 2.0,
     },
     wordSpacing: {

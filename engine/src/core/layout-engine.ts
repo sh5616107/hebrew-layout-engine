@@ -286,6 +286,7 @@ export function layoutDocumentWithSections(
       widows: 2,
       orphans: 2,
       balanceTolerance: fullConfig.balanceTolerance ?? 0,
+      defaultParagraphSpacing: 1.0,
       maxParagraphSpacingMultiplier: 2.0, // proposal-for-approval
     },
     wordSpacing: config.wordSpacing ?? {
