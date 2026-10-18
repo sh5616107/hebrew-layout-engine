@@ -543,6 +543,61 @@ describe('Section Balancer - Stage B: Alternative Breaks (Section 4)', () => {
     expect(altUsedDiag).toBeDefined();
     expect(altUsedDiag?.paragraphId).toBe('para-3');
   });
+
+  it('should fail when enableStageB=false, succeed when enabled', () => {
+    // Scenario: 51 lines (odd) - Stage A cannot achieve perfect balance
+    // Stage B with alternative can reduce to 50 lines (even) → perfect balance
+    const section: LayoutSection = {
+      id: 'test-section',
+      kind: 'body',
+      balancePolicy: 'balanced',
+      paragraphs: [
+        {
+          id: 'para-1',
+          lines: Array.from({ length: 20 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+        {
+          id: 'para-2',
+          lines: Array.from({ length: 20 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+        {
+          id: 'para-3',
+          lines: Array.from({ length: 11 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+          alternativeBreaks: [
+            {
+              lines: Array.from({ length: 10 }, () => createLine()),
+              wordSpacingPercent: 95,
+              quality: 0.9,
+            },
+          ],
+        },
+      ],
+    };
+
+    // Run with Stage B disabled
+    const disabledConfig: SectionLayoutConfig = {
+      ...defaultConfig,
+      sectionBalancing: {
+        ...defaultConfig.sectionBalancing,
+        enableStageB: false,
+      },
+    };
+    const resultDisabled = layoutSection(section, disabledConfig);
+    const pageDisabled = resultDisabled.pages[0];
+
+    // Should NOT be balanced (Stage A fails with 51 lines, Stage B disabled, Stage C has no boundaries in single-para scenario)
+    expect(pageDisabled?.isBalanced).toBe(false);
+
+    // Run with Stage B enabled
+    const resultEnabled = layoutSection(section, defaultConfig);
+    const pageEnabled = resultEnabled.pages[0];
+
+    // Should be balanced (Stage B applies alternative)
+    expect(pageEnabled?.isBalanced).toBe(true);
+  });
 });
 
 
@@ -692,6 +747,58 @@ describe('Section Balancer - Stage C: Paragraph Spacing (Section 5)', () => {
     // Heights should be multiples of 1 (in line units)
     expect(page.rightHeight % 1).toBe(0);
     expect(page.leftHeight % 1).toBe(0);
+  });
+
+  it('should distribute spacing as whole lines to boundaries', () => {
+    // Test that spacing is added as whole lines (integers) to boundaries
+    // Use 3 paragraphs in shorter column, need 1 line of spacing
+    // 15+15+14=44 lines, split 23+21 (delta=2L)
+    // Add 1L spacing to left column → 23+22 (delta=1L, unbalanced with tolerance=0)
+    // Add 2L spacing → 23+23 (delta=0, balanced)
+    const section: LayoutSection = {
+      id: 'test-section',
+      kind: 'body',
+      balancePolicy: 'balanced',
+      paragraphs: [
+        {
+          id: 'para-1',
+          lines: Array.from({ length: 15 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+        {
+          id: 'para-2',
+          lines: Array.from({ length: 15 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+        {
+          id: 'para-3',
+          lines: Array.from({ length: 14 }, () => createLine()),
+          style: { lastLine: 'justify', widows: 2, orphans: 2 },
+        },
+      ],
+    };
+
+    const result = layoutSection(section, defaultConfig);
+
+    const page = result.pages[0];
+    if (!page) {
+      throw new Error('Page is undefined');
+    }
+
+    // Should be balanced
+    expect(page.isBalanced).toBe(true);
+
+    // Check that all spacingAfter values are integers
+    const allSegments = [
+      ...page.rightColumn.segments,
+      ...page.leftColumn.segments,
+    ];
+
+    for (const segment of allSegments) {
+      if (segment.spacingAfter !== undefined) {
+        expect(Number.isInteger(segment.spacingAfter)).toBe(true);
+      }
+    }
   });
 });
 
@@ -920,7 +1027,11 @@ describe('Section Balancer - Determinism and Limits (Section 8)', () => {
   });
 
   it('should enforce maxAttempts limit', () => {
-    // Test with very low maxAttempts to ensure it's enforced
+    // NOTE: maxAttempts is used internally by Stage D (not yet implemented)
+    // This test verifies the system doesn't hang, but cannot prove the limit is enforced
+    // without Stage D implementation that actually uses the counter.
+    // TODO: Add proper verification when Stage D is implemented.
+    
     const limitedConfig: SectionLayoutConfig = {
       ...defaultConfig,
       sectionBalancing: {
@@ -950,8 +1061,11 @@ describe('Section Balancer - Determinism and Limits (Section 8)', () => {
   });
 
   it('should enforce lookAheadPages and lookBackPages limits', () => {
-    // Test that look-ahead/back limits are respected
-    // Stage D would use these limits
+    // NOTE: lookAheadPages and lookBackPages are used by Stage D (not yet implemented)
+    // This test verifies the system accepts these parameters, but cannot prove they're
+    // enforced without Stage D implementation that actually uses them.
+    // TODO: Add proper verification when Stage D is implemented.
+    
     const strictConfig: SectionLayoutConfig = {
       ...defaultConfig,
       sectionBalancing: {

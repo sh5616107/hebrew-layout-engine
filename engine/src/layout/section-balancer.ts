@@ -644,15 +644,20 @@ function stageC_ParagraphSpacing(
 
     if (newDelta <= config.sectionBalancing.balanceTolerance) {
       // Balanced! Apply the spacing to paragraph boundaries
-      // Distribute spacing evenly across paragraph boundaries as INTEGER line units
+      // Distribute spacing across paragraph boundaries as whole lines
       const numBoundaries = shorterContent.segments.length - 1;
       
-      // Check if we can distribute additionalLines evenly as integers
-      const spacingPerBoundary = additionalHeight / numBoundaries;
+      // Distribute additionalLines to boundaries
+      // Strategy: Add full lines to boundaries one at a time (not necessarily evenly)
+      const spacingPerBoundary: number[] = new Array(numBoundaries).fill(0);
       
-      // Must be integer - if not, Stage C fails
-      if (!Number.isInteger(spacingPerBoundary)) {
-        continue; // Try next increment
+      // Distribute lines to boundaries (simple strategy: fill first boundary first)
+      let remaining = additionalHeight;
+      let boundaryIndex = 0;
+      while (remaining > 0 && boundaryIndex < numBoundaries) {
+        spacingPerBoundary[boundaryIndex] += 1;
+        remaining -= 1;
+        boundaryIndex = (boundaryIndex + 1) % numBoundaries; // Round-robin
       }
 
       // Create new segments with spacing
@@ -661,7 +666,7 @@ function stageC_ParagraphSpacing(
           // Not the last segment - add spacing after it
           return {
             ...seg,
-            spacingAfter: (seg.spacingAfter ?? 0) + spacingPerBoundary,
+            spacingAfter: (seg.spacingAfter ?? 0) + spacingPerBoundary[idx],
           };
         }
         return seg; // Last segment doesn't need spacing after
