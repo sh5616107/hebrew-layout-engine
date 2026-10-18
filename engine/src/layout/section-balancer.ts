@@ -655,7 +655,7 @@ function stageC_ParagraphSpacing(
       let remaining = additionalHeight;
       let boundaryIndex = 0;
       while (remaining > 0 && boundaryIndex < numBoundaries) {
-        spacingPerBoundary[boundaryIndex] += 1;
+        spacingPerBoundary[boundaryIndex]! += 1;
         remaining -= 1;
         boundaryIndex = (boundaryIndex + 1) % numBoundaries; // Round-robin
       }
@@ -664,9 +664,10 @@ function stageC_ParagraphSpacing(
       const newSegments = shorterContent.segments.map((seg, idx) => {
         if (idx < shorterContent.segments.length - 1) {
           // Not the last segment - add spacing after it
+          const additionalSpacing = spacingPerBoundary[idx] ?? 0;
           return {
             ...seg,
-            spacingAfter: (seg.spacingAfter ?? 0) + spacingPerBoundary[idx],
+            spacingAfter: (seg.spacingAfter ?? 0) + additionalSpacing,
           };
         }
         return seg; // Last segment doesn't need spacing after
