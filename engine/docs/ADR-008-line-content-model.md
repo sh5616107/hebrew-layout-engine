@@ -1,7 +1,7 @@
 # ADR-008: Line Content Model - ShapedWord vs ShapedRun Unification
 
 ## Status
-**Proposed** - Documented for future implementation
+**Approved** - Migration plan ready for implementation
 
 ## Context
 
@@ -39,7 +39,6 @@ Used in the **section-level pipeline** (M2+):
 - `layoutSection()` - section-level balancing
 - `section-balancer.ts` - 4-stage balancing
 - `paragraph-splitter.ts` - widow/orphan control
-- Future: paragraph-level justification
 
 **Structure:**
 ```typescript
@@ -64,16 +63,11 @@ export interface ShapedRun {
 
 **ShapedWord usage:**
 ```
-src/core/layout-engine.ts:8:    import type { ShapedWord } from '../line-breaking/greedy-breaker';
-src/core/layout-engine.ts:22:   export type { ShapedWord };
+src/core/layout-engine.ts:8:    import type { ShapedWord }
 src/core/layout-engine.ts:82:   words: ShapedWord[];
 src/core/layout-engine.ts:115:  layoutDocument(shapedWords: ShapedWord[], ...)
-src/core/layout-engine.ts:129:  const lineBreakResult = breakLines(shapedWords, { ... });
-src/bidi/bidi-integration.ts:7: import type { ShapedWord } from '../line-breaking/greedy-breaker';
 src/bidi/bidi-integration.ts:27: applyBiDiToWords(words: ShapedWord[], ...)
-src/justification/justify.ts:8: import type { ShapedWord } from '../line-breaking/greedy-breaker';
 src/justification/justify.ts:51: justifyLine(words: ShapedWord[], ...)
-src/layout/two-column-layout.ts:11: import type { ShapedWord } from '../line-breaking/greedy-breaker';
 src/layout/two-column-layout.ts:15: lines: ShapedWord[][];
 src/line-breaking/greedy-breaker.ts:8: export interface ShapedWord { ... }
 ```
@@ -81,14 +75,10 @@ src/line-breaking/greedy-breaker.ts:8: export interface ShapedWord { ... }
 **ShapedRun usage:**
 ```
 src/core/types.ts:192:      export interface ShapedRun { ... }
-src/core/types.ts:206:      runs: ShapedRun[];
 src/core/types.ts:302:      lines: ShapedRun[][];  // LineBreakAlternative
 src/core/types.ts:343:      lines: ShapedRun[][];  // LayoutParagraph
-src/typography/shaper.ts:6:  import type { PositionedGlyph, ShapedRun } from '../core/types.js';
 src/typography/shaper.ts:83: ): Promise<ShapedRun> { ... }
-src/layout/section-balancer.ts:10: import { ShapedRun } from '../core/types.js';
-src/layout/section-balancer.ts:47: lines: ShapedRun[][];  // ColumnContent
-src/layout/section-balancer.ts:59: lines: ShapedRun[][];  // ParagraphSegment
+src/layout/section-balancer.ts:47: lines: ShapedRun[][];
 ```
 
 ### The Mismatch
@@ -114,128 +104,272 @@ When we integrate section balancing into `layoutDocument()`:
 
 ## Decision
 
-**Defer unification until section balancing is integrated into layoutDocument().**
+**Migrate everything to a unified ShapedRun model with explicit text/space distinction.**
 
-When that integration happens, choose ONE of these paths:
-
-### Option A: Migrate Everything to ShapedRun
-**Pros:**
-- ShapedRun has precise unit system (mpt)
-- Already used in section balancer, paragraph splitter
-- Better for fine-grained layout control
-- Matches spec terminology
-
-**Cons:**
-- Large refactor: update line-breaking, justification, two-column-layout, BiDi
-- Update all tests and e2e pipelines
-- Requires conversion at shaping boundary (HarfBuzz outputs pts)
-
-**Migration steps:**
-1. Add conversion utilities: `shapedWordToRun()`, `shapedRunToWord()`
-2. Update `breakLines()` to work with `ShapedRun[]`
-3. Update `justifyLine()` to work with `ShapedRun[]`
-4. Update `layoutTwoColumns()` to work with `ShapedRun[][]`
-5. Update `applyBiDiToWords()` to `applyBiDiToRuns()`
-6. Update `layoutDocument()` entry point
-7. Update all tests
-
-### Option B: Extend ShapedWord
-**Pros:**
-- Minimal changes to existing pipeline
-- Word-level abstraction matches line-breaking domain
-- Tests remain valid
-
-**Cons:**
-- Need to add unit precision (mpt support)
-- Need to reconcile with `PositionedGlyph` model
-- Doesn't align with spec terminology
-
-**Migration steps:**
-1. Add `mptWidth` field to `ShapedWord`
-2. Add `direction: 'ltr' | 'rtl'` field
-3. Update section balancer to use `ShapedWord[][]`
-4. Update `LayoutParagraph.lines` type
-5. Update paragraph splitter
-
-### Option C: Unified Model (Recommended Path Forward)
-Create a **single canonical type** that serves both pipelines:
+### Unified ShapedRun Model
 
 ```typescript
 /**
- * Shaped text content - canonical representation.
- * Used for line breaking, justification, and layout.
+ * Shaped text run - unified representation for all pipeline stages.
+ * A run can be text content or whitespace.
  */
-export interface ShapedContent {
-  // Identity
+export interface ShapedRun {
+  // Run type
+  kind: 'text' | 'space';    // Text content or spacing
+  
+  // Content
   text: string;              // Original text
   font: string;
-  fontSize: number;          // Source font size (pts)
   direction: 'ltr' | 'rtl';
   
   // Shaping output (from HarfBuzz)
-  glyphs: PositionedGlyph[]; // Glyph IDs + positions
+  glyphs: PositionedGlyph[];
   
-  // Measurements
-  width: number;             // Width in points
-  widthMpt: Distance;        // Width in millipoints (computed)
+  // Measurements (all in mpt)
+  width: Distance;           // Total width in millipoints
+  naturalWidth?: Distance;   // For 'space': natural width before justification
   
-  // Optional features
+  // Optional
   features?: Record<string, boolean>; // OpenType features
+}
+
+/**
+ * Positioned glyph with offsets.
+ */
+export interface PositionedGlyph {
+  id: number;                // Glyph ID
+  xAdvance: number;          // Advance width (mpt)
+  yAdvance: number;          // Advance height (mpt)
+  xOffset: number;           // X offset (mpt)
+  yOffset: number;           // Y offset (mpt)
 }
 ```
 
-**Deprecation path:**
-1. Introduce `ShapedContent` alongside existing types
-2. Add conversion helpers: `wordToContent()`, `runToContent()`
-3. Migrate one module at a time (line-breaking → justification → layout → section-balancer)
-4. Mark `ShapedWord` and `ShapedRun` as deprecated
-5. Remove deprecated types in next major version
+### Key Design Decisions
 
-## Open Questions
+1. **Text vs Space Runs**
+   - `kind: 'text'` - Actual word or text content
+   - `kind: 'space'` - Whitespace between words
+   - Justification stretches only `'space'` runs within allowed range
 
-1. **When to trigger unification?**
-   - Wait until section balancing integration into `layoutDocument()`
-   - Do it proactively before integration?
+2. **All Measurements in mpt**
+   - No fontSize in points - derive from `size` field or context
+   - Consistent unit system throughout pipeline
+   - Conversion to points only at rendering boundary
 
-2. **Unit system:**
-   - Store both pts and mpt? (memory overhead)
-   - Store only mpt and convert on demand? (CPU overhead)
-   - Use pts everywhere and convert only at section-balancer boundary?
+3. **Natural Width for Spaces**
+   - `'space'` runs store `naturalWidth` before justification
+   - Justification multiplies by percentage (80%-130%)
+   - Preserves original spacing information
 
-3. **Granularity:**
-   - Keep "word" as the atomic unit? (aligns with line-breaking)
-   - Switch to "run" as atomic unit? (aligns with HarfBuzz and BiDi)
-   - Support both with explicit naming? (`ShapedWord` for words, `ShapedRun` for arbitrary runs)
+## Migration Plan
 
-4. **Backwards compatibility:**
-   - Maintain both types during transition?
-   - Version bump to signal breaking change?
-   - Gradual migration with adapters?
+### Step 0: Create Golden Snapshots (Before Any Changes)
 
-5. **Testing strategy:**
-   - How to validate conversion helpers don't lose data?
-   - How to ensure pixel-perfect rendering after migration?
+**Test inputs:**
+1. 100 Hebrew words with nikud
+2. 100 mixed Hebrew + Latin words
+3. Complex scenario: Hebrew with nikud + Latin + punctuation
+
+**Snapshot data (JSON):**
+```typescript
+interface LayoutSnapshot {
+  input: string;              // Original text
+  totalWords: number;         // Word count
+  lines: {
+    lineIndex: number;
+    words: {
+      text: string;
+      xPosition: number;      // mpt
+      width: number;          // mpt
+    }[];
+    spacing: number[];        // mpt between words
+    totalWidth: number;       // mpt
+  }[];
+  pages: {
+    pageIndex: number;
+    rightColumnLines: number;
+    leftColumnLines: number;
+  }[];
+}
+```
+
+**Golden snapshot script:**
+```bash
+npm run test:snapshot -- --create
+# Creates: tests/golden/snapshot-hebrew-nikud.json
+#          tests/golden/snapshot-mixed.json
+#          tests/golden/snapshot-complex.json
+```
+
+### Step 1: greedy-breaker.ts
+
+**Changes:**
+- Change `breakLines()` to accept `ShapedRun[]` instead of `ShapedWord[]`
+- Change return type to `lines: ShapedRun[][]`
+- Internal logic unchanged (still breaks at `kind: 'space'` boundaries)
+
+**Commit:** `refactor(line-breaking): migrate to ShapedRun`
+
+**Tests:**
+- All existing tests updated to use ShapedRun
+- Golden snapshot test: verify word count matches
+- Golden snapshot test: verify line breaks match
+
+### Step 2: justify.ts
+
+**Changes:**
+- Change `justifyLine()` to accept `ShapedRun[]` instead of `ShapedWord[]`
+- Stretch only runs with `kind: 'space'`
+- Use `naturalWidth` as base, multiply by justification percentage
+- Return adjusted runs (with modified widths)
+
+**Commit:** `refactor(justification): migrate to ShapedRun with space stretching`
+
+**Tests:**
+- Update all justification tests to use ShapedRun
+- Golden snapshot test: verify spacing values within tolerance (±1 mpt)
+- Golden snapshot test: verify total line widths match
+
+### Step 3: bidi-integration.ts
+
+**Changes:**
+- Rename `applyBiDiToWords()` → `applyBiDiToRuns()`
+- Accept `ShapedRun[]` instead of `ShapedWord[]`
+- Return `ShapedRun[]` (reordered)
+- Logic unchanged (reorder based on embedding levels)
+
+**Commit:** `refactor(bidi): migrate to ShapedRun`
+
+**Tests:**
+- Update all BiDi tests to use ShapedRun
+- Golden snapshot test: verify mixed text layout matches
+
+### Step 4: two-column-layout.ts
+
+**Changes:**
+- Change `layoutTwoColumns()` to accept `lines: ShapedRun[][]`
+- Update `Column` interface: `lines: ShapedRun[][]`
+- Update `TwoColumnLayout` interface
+- Internal logic unchanged
+
+**Commit:** `refactor(two-column): migrate to ShapedRun`
+
+**Tests:**
+- Update all two-column tests to use ShapedRun
+- Golden snapshot test: verify page breaks match
+- Golden snapshot test: verify column line counts match
+
+### Step 5: layout-engine.ts
+
+**Changes:**
+- Change `layoutDocument()` signature: `shapedRuns: ShapedRun[]` (rename param)
+- Update `RenderedLine` interface: `runs: ShapedRun[]` (rename from `words`)
+- **Remove empty array bridge:** Delete lines 332-333:
+  ```typescript
+  // DELETE THESE:
+  const rightWords: ShapedWord[][] = sectionPage.rightColumn.lines.map(() => []);
+  const leftWords: ShapedWord[][] = sectionPage.leftColumn.lines.map(() => []);
+  ```
+- Update type exports: remove `export type { ShapedWord };`
+
+**Commit:** `refactor(layout-engine): migrate to ShapedRun, remove empty array bridge`
+
+**Tests:**
+- Update all layout-engine tests to use ShapedRun
+- Golden snapshot test: full pipeline verification
+- **Word count verification:** Count `kind: 'text'` runs in output, verify equals input count
+
+### Step 6: Delete ShapedWord
+
+**Changes:**
+- Delete `ShapedWord` interface from `line-breaking/greedy-breaker.ts`
+- Update all remaining imports
+- Run `grep -r "ShapedWord" src/` → verify 0 results
+
+**Commit:** `refactor: delete ShapedWord, complete migration to ShapedRun`
+
+**Verification:**
+```bash
+# Zero references to ShapedWord
+$ grep -r "ShapedWord" src/ tests/
+# No results
+
+# All golden snapshots pass
+$ npm run test:snapshot -- --verify
+# ✅ All snapshots match
+```
+
+## Testing Strategy
+
+### Golden Snapshot Tests
+
+**File:** `tests/golden/layout-snapshot.test.ts`
+
+```typescript
+describe('Layout Golden Snapshots', () => {
+  it('should match snapshot for Hebrew with nikud', async () => {
+    const snapshot = await loadSnapshot('snapshot-hebrew-nikud.json');
+    const result = layoutDocument(snapshot.input, config);
+    
+    // Word count check
+    const outputWordCount = countTextRuns(result);
+    expect(outputWordCount).toBe(snapshot.totalWords);
+    
+    // Line breaks check
+    expect(result.pages.length).toBe(snapshot.pages.length);
+    
+    // Positioning check (±1 mpt tolerance for rounding)
+    for (let pageIdx = 0; pageIdx < snapshot.pages.length; pageIdx++) {
+      const expectedPage = snapshot.pages[pageIdx];
+      const actualPage = result.pages[pageIdx];
+      expect(actualPage.rightColumn.lines.length).toBe(expectedPage.rightColumnLines);
+      expect(actualPage.leftColumn.lines.length).toBe(expectedPage.leftColumnLines);
+    }
+  });
+  
+  it('should match snapshot for mixed Hebrew + Latin', async () => {
+    // Same structure as above
+  });
+});
+```
+
+### Per-Step Verification
+
+Each commit must pass:
+1. `npm run typecheck` - no TypeScript errors
+2. `npm test` - all existing tests pass (updated for ShapedRun)
+3. `npm run test:snapshot` - golden snapshots match within tolerance
+4. Word count verification: output run count equals input
 
 ## Consequences
 
-### If we choose Option A (ShapedRun everywhere):
-- ✅ Consistent with section balancer implementation
-- ✅ Precise unit system throughout pipeline
-- ❌ Large refactor with high risk
-- ❌ All existing tests need update
+### Benefits
+- ✅ Single unified model throughout pipeline
+- ✅ Consistent unit system (all mpt)
+- ✅ Explicit text/space distinction for justification
+- ✅ No data loss at conversion boundaries
+- ✅ Aligns with section balancer (M2+)
+- ✅ Removes empty array bridge hack (lines 332-333)
 
-### If we choose Option B (Extend ShapedWord):
-- ✅ Minimal disruption to current pipeline
-- ✅ Quick to implement
-- ❌ Doesn't align with spec terminology
-- ❌ Potential confusion between "word" and "run"
+### Migration Risks
+- ⚠️ Large refactor across 6 files
+- ⚠️ All tests require updates
+- ⚠️ Potential for subtle positioning bugs
 
-### If we choose Option C (Unified model):
-- ✅ Clean long-term solution
-- ✅ Gradual migration path
-- ✅ Clear deprecation timeline
-- ❌ Temporary code duplication
-- ❌ Requires discipline to complete migration
+### Mitigation
+- ✅ Golden snapshot tests catch any layout changes
+- ✅ Incremental migration (one file per commit)
+- ✅ Word count verification ensures no data loss
+- ✅ Each step independently verified before proceeding
+
+## Timeline
+
+**Current:** ADR approved, ready to proceed  
+**Step 0:** Create golden snapshots (1 commit)  
+**Steps 1-5:** Migrate modules (5 commits, 1 per module)  
+**Step 6:** Delete ShapedWord (1 commit)  
+**Total:** 7 commits, each independently verified
 
 ## References
 
@@ -245,20 +379,11 @@ export interface ShapedContent {
 - ADR-007: Section Balancing (introduced `ShapedRun` in `LayoutParagraph`)
 - Issue: layoutDocument() bridge at line 332-333 creates empty word arrays
 
-## Recommendation
+## Acceptance Criteria
 
-**Implement Option C (Unified Model) when section balancing is integrated into `layoutDocument()`.**
-
-**Timeline:**
-1. **Now:** Document this ADR (this file)
-2. **M2 completion:** Continue using separate types
-3. **M3 planning:** Design `ShapedContent` interface
-4. **M3 implementation:** Gradual migration with adapters
-5. **M4:** Remove deprecated types
-
-**Acceptance criteria for migration:**
-- ✅ Zero visual regression (pixel-perfect rendering maintained)
-- ✅ All tests passing with new type
-- ✅ Performance neutral or improved
-- ✅ No data loss in conversions
-- ✅ Clear migration guide for future contributors
+- ✅ Zero references to `ShapedWord` in src/ and tests/
+- ✅ All 223 tests passing with ShapedRun
+- ✅ Golden snapshot tests pass (±1 mpt tolerance)
+- ✅ Word count verification: output equals input
+- ✅ tsc clean, ESLint clean
+- ✅ No data loss at any conversion boundary
