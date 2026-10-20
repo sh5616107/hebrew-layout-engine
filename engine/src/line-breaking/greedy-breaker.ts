@@ -10,10 +10,22 @@ export interface ShapedWord {
   text: string;
   /** Glyph IDs from HarfBuzz */
   glyphIds: number[];
-  /** Glyph advances (widths) in font units */
+  /** Glyph advances (widths) in points */
   advances: number[];
   /** Total width in points */
   width: number;
+  /**
+   * Glyph offsets in points (x to the right, y up) from GPOS, one per glyph.
+   * Present only for words shaped by HarfBuzz (see typography/word-shaper.ts).
+   * Without it the renderer cannot place glyphs itself and falls back to
+   * PDFKit's own text layout, which does not match the measured width.
+   * Glyphs are in visual (left-to-right drawing) order.
+   */
+  offsets?: Array<{ x: number; y: number }>;
+  /** UTF-16 index into `text` of each glyph's cluster (same length as glyphIds) */
+  clusters?: number[];
+  /** Font size in points the word was shaped at */
+  fontSize?: number;
 }
 
 export interface LineBreakResult {
@@ -149,6 +161,13 @@ function breakWordAtGlyphBoundaries(
 ): ShapedWord[] {
   // Handle edge case: maxWidth too small to fit even one glyph
   if (maxWidth <= 0 || word.glyphIds.length === 0) {
+    return [word];
+  }
+
+  // Splitting a HarfBuzz-shaped word between glyphs can separate a base letter
+  // from its nikud/teamim and breaks the glyph<->text mapping, so such words
+  // are never split (they overflow instead).
+  if (word.offsets) {
     return [word];
   }
 

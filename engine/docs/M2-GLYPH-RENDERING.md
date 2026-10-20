@@ -2,7 +2,7 @@
 
 **Priority:** Medium (after column balancing)  
 **Effort:** 2-3 days  
-**Status:** Not Started
+**Status:** Done (2026-10-20) - see "Update 2026-10-20" in ADR-004. Implemented in `src/rendering/glyph-renderer.ts`; the plan below was changed: no font-resolver or CID mapping module was needed.
 
 ## Goal
 

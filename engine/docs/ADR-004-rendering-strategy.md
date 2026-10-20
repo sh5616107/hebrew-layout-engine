@@ -6,6 +6,31 @@
 
 ---
 
+## Update 2026-10-20: Alternative B implemented
+
+Direct glyph rendering is now the default for words that carry HarfBuzz glyph data
+(`ShapedWord.offsets`): `src/rendering/glyph-renderer.ts`, used by `renderToPDF` (mode `auto`).
+PDFKit `text()` remains only as a fallback for words without glyph data (test doubles).
+
+Why it was needed: with `text()`, PDFKit/fontkit shapes the word again, so what is drawn
+differs from what was measured (up to 5.9% on words with teamim) and bidi is not applied.
+The demo PDFs produced by the e2e tests with mock words showed stacked/overlapping letters.
+
+Findings from the implementation (verified, harfbuzzjs 1.6.3 / pdfkit 0.15.2):
+- harfbuzzjs 1.x: `font.setScale(upem, upem)` is mandatory; the default scale 0 returns all-zero advances/offsets.
+- `buffer.setDirection()` takes the numeric enum (`Direction.RTL` = 5). A string is silently ignored (shaped LTR).
+- For RTL, HarfBuzz already returns glyphs in visual (left-to-right) order: **no glyph reversal** is needed
+  (the "RTL glyph reversal" con above does not apply).
+- No CID mapping table is needed: `font.subset.includeGlyph(gid)` of PDFKit's embedded font returns the CID.
+- Marks come back with xAdvance 0 and an xOffset; Ezra SIL never emits yOffset.
+- `LineContent.y` is the top of the line box (`topMargin + i * lineHeight`); the renderer derives the baseline
+  from the font ascent/descent (half-leading, as in CSS).
+- Uses PDFKit internals (`_font`, `subset`, `widths`, `unicode`): guarded by `tests/integration/glyph-pdf.test.ts`.
+
+Known limitations: ToUnicode maps glyphs through the font's reverse cmap, so substituted glyph variants and
+marks may have no text mapping (text search of nikud'd words is not reliable yet).
+
+
 ## Context
 
 After shaping text with HarfBuzz (ADR-002), we must render the shaped glyphs to PDF. The specification (section 25) requires:

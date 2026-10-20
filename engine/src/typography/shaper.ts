@@ -1,166 +1,152 @@
 /**
- * Text shaping using HarfBuzz
- * Converts text + font into positioned glyphs with proper diacritics
+ * Text shaping using HarfBuzz (harfbuzzjs v1 API).
+ *
+ * Converts text + font into positioned glyphs. Marks (nikud, teamim) come back
+ * with xAdvance = 0 and a non-zero xOffset/yOffset from GPOS; callers must
+ * draw glyph i at (pen + xOffset, baseline - yOffset) and then advance the pen
+ * by xAdvance.
+ *
+ * Notes on harfbuzzjs 1.x (verified against 1.6.3):
+ * - A Font's default scale is 0, which makes every advance/offset 0.
+ *   We always call setScale(upem, upem) so results are in font units.
+ * - Buffer.setDirection() takes the numeric Direction enum (RTL = 5), not a
+ *   string. A string is silently ignored and the run is shaped as LTR.
+ * - For RTL runs HarfBuzz returns glyphs in *visual* order (left to right).
+ *   Do not reverse them again when drawing.
  */
 
+import * as hb from 'harfbuzzjs';
 import type { PositionedGlyph, ShapedRun } from '../core/types.js';
 import { ptToMpt } from '../core/units.js';
 
-// HarfBuzz types
-interface HarfBuzzBlob {
-  destroy(): void;
+/** One glyph as returned by HarfBuzz, in font units (1 em = `upem`). */
+export interface RawGlyph {
+  glyphId: number;
+  /** UTF-16 index into the shaped text of the first character of the cluster */
+  cluster: number;
+  xAdvance: number;
+  yAdvance: number;
+  xOffset: number;
+  yOffset: number;
 }
 
-interface HarfBuzzFace {
-  destroy(): void;
-}
+export type TextDirection = 'rtl' | 'ltr' | 'auto';
 
-interface HarfBuzzFont {
-  setScale(x: number, y: number): void;
-  destroy(): void;
-}
+/** A loaded font that can shape many strings without re-parsing the font file. */
+export class HbFont {
+  readonly upem: number;
+  readonly ascender: number;
+  readonly descender: number;
+  private readonly font: hb.Font;
 
-interface HarfBuzzBuffer {
-  addText(text: string): void;
-  guessSegmentProperties(): void;
-  json(font: HarfBuzzFont): HarfBuzzGlyphInfo[];
-  destroy(): void;
-  direction: string;
-}
+  constructor(fontData: ArrayBuffer | Uint8Array) {
+    const bytes = fontData instanceof Uint8Array ? fontData : new Uint8Array(fontData);
+    // Copy into a standalone ArrayBuffer: a Node Buffer's .buffer is a shared pool.
+    const ab = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    const blob = new hb.Blob(ab);
+    const face = new hb.Face(blob);
+    this.font = new hb.Font(face);
+    this.upem = face.upem;
+    this.font.setScale(this.upem, this.upem);
+    const ext = this.font.hExtents();
+    this.ascender = ext.ascender;
+    this.descender = ext.descender;
+  }
 
-interface HarfBuzzGlyphInfo {
-  g: number; // glyph ID
-  dx?: number; // x offset (26.6 fixed-point)
-  dy?: number; // y offset
-  ax?: number; // x advance
-  ay?: number; // y advance
-}
-
-interface HarfBuzzFeature {
-  tag: string;
-  value: number;
-}
-
-interface HarfBuzzInstance {
-  createBlob(data: ArrayBuffer): HarfBuzzBlob;
-  createFace(blob: HarfBuzzBlob, index: number): HarfBuzzFace;
-  createFont(face: HarfBuzzFace): HarfBuzzFont;
-  createBuffer(): HarfBuzzBuffer;
-  shape(font: HarfBuzzFont, buffer: HarfBuzzBuffer, features?: HarfBuzzFeature[]): void;
-}
-
-// Module cache
-let hb: HarfBuzzInstance | null = null;
-
-/**
- * Initialize HarfBuzz (lazy load)
- */
-async function initHarfBuzz(): Promise<HarfBuzzInstance> {
-  if (hb) return hb;
-  
-  try {
-    // Try dynamic import
-    const module = await import('harfbuzzjs');
-    // TypeScript can't infer harfbuzzjs structure, cast to unknown first
-    const mod = module as unknown as { default?: HarfBuzzInstance } | HarfBuzzInstance;
-    hb = ('default' in mod ? mod.default : mod) as HarfBuzzInstance;
-    if (!hb) {
-      throw new Error('HarfBuzz module loaded but instance is null');
+  /** Shape `text`; result is in visual (left-to-right drawing) order. */
+  shapeRaw(text: string, direction: TextDirection = 'auto'): { glyphs: RawGlyph[]; direction: 'rtl' | 'ltr' } {
+    const buffer = new hb.Buffer();
+    buffer.addText(text);
+    if (direction === 'rtl') {
+      buffer.setDirection(hb.Direction.RTL);
+      buffer.setScript('Hebr');
+      buffer.setLanguage('he');
+    } else if (direction === 'ltr') {
+      buffer.setDirection(hb.Direction.LTR);
+      buffer.guessSegmentProperties();
+      buffer.setDirection(hb.Direction.LTR);
+    } else {
+      buffer.guessSegmentProperties();
     }
-    return hb;
-  } catch (error) {
-    throw new Error(`Failed to load HarfBuzz: ${error}`);
+    hb.shape(this.font, buffer);
+    const infos = buffer.getGlyphInfos();
+    const positions = buffer.getGlyphPositions();
+    const glyphs: RawGlyph[] = infos.map((info, i) => {
+      const p = positions[i];
+      return {
+        glyphId: info.codepoint,
+        cluster: info.cluster,
+        xAdvance: p?.xAdvance ?? 0,
+        yAdvance: p?.yAdvance ?? 0,
+        xOffset: p?.xOffset ?? 0,
+        yOffset: p?.yOffset ?? 0,
+      };
+    });
+    const first = glyphs[0];
+    const last = glyphs[glyphs.length - 1];
+    // Visual order with descending clusters means the run was shaped RTL.
+    const resolved: 'rtl' | 'ltr' =
+      direction === 'auto'
+        ? first && last && first.cluster > last.cluster
+          ? 'rtl'
+          : 'ltr'
+        : direction;
+    return { glyphs, direction: resolved };
   }
 }
 
+const fontCache = new WeakMap<object, HbFont>();
+
+function fontFor(fontData: ArrayBuffer | Uint8Array): HbFont {
+  const cached = fontCache.get(fontData);
+  if (cached) return cached;
+  const created = new HbFont(fontData);
+  fontCache.set(fontData, created);
+  return created;
+}
+
 /**
- * Shape text with HarfBuzz
- * 
+ * Shape text into a ShapedRun (millipoint units).
+ *
  * @param text - Text to shape (Hebrew with nikud/teamim)
- * @param fontBuffer - Font file as ArrayBuffer
+ * @param fontBuffer - Font file bytes. The parsed font is cached per buffer object.
  * @param fontSize - Font size in points
- * @param features - OpenType features (optional)
- * @returns ShapedRun with positioned glyphs
  */
 export async function shape(
   text: string,
-  fontBuffer: ArrayBuffer,
-  fontSize: number,
-  features?: Record<string, boolean>
+  fontBuffer: ArrayBuffer | Uint8Array,
+  fontSize: number
 ): Promise<ShapedRun> {
-  const hbInstance = await initHarfBuzz();
-  
-  // Create blob from font data
-  const blob = hbInstance.createBlob(fontBuffer);
-  const face = hbInstance.createFace(blob, 0);
-  const font = hbInstance.createFont(face);
-  
-  // Set font size (HarfBuzz uses 26.6 fixed-point, we use points)
-  const scale = fontSize * 64; // Convert to 26.6 format
-  font.setScale(scale, scale);
-  
-  // Create buffer
-  const buffer = hbInstance.createBuffer();
-  buffer.addText(text);
-  buffer.guessSegmentProperties();
-  
-  // Apply features if provided
-  const featureList = features
-    ? Object.entries(features).map(([tag, value]) => ({ tag, value: value ? 1 : 0 }))
-    : [];
-  
-  // Shape!
-  hbInstance.shape(font, buffer, featureList);
-  
-  // Get results
-  const result = buffer.json(font);
-  
-  // Convert to our format
-  const glyphs: PositionedGlyph[] = result.map((item) => ({
-    glyphId: item.g,
-    x: ptToMpt((item.dx || 0) / 64), // Convert from 26.6 to mpt
-    y: ptToMpt((item.dy || 0) / 64),
-    advance: ptToMpt((item.ax || 0) / 64),
+  const font = fontFor(fontBuffer);
+  const { glyphs: raw, direction } = font.shapeRaw(text);
+  const k = fontSize / font.upem;
+
+  const glyphs: PositionedGlyph[] = raw.map((g) => ({
+    glyphId: g.glyphId,
+    x: ptToMpt(g.xOffset * k),
+    y: ptToMpt(g.yOffset * k),
+    advance: ptToMpt(g.xAdvance * k),
   }));
-  
-  // Calculate total width
-  const width = glyphs.reduce((sum, g) => sum + g.advance, 0);
-  
-  // Detect direction from buffer
-  const direction = buffer.direction === 'rtl' ? 'rtl' : 'ltr';
-  
-  // Cleanup
-  buffer.destroy();
-  font.destroy();
-  face.destroy();
-  blob.destroy();
-  
+
   return {
     font: 'unknown', // TODO: Extract from font metadata
     size: ptToMpt(fontSize),
     glyphs,
-    direction: direction as 'rtl' | 'ltr',
-    width,
+    direction,
+    width: glyphs.reduce((sum, g) => sum + g.advance, 0),
   };
 }
 
-/**
- * Simple synchronous wrapper for testing
- * In production, use async shape() function
- */
+/** Kept for existing callers; identical to shape(). */
 export async function shapeSync(
   text: string,
-  fontBuffer: ArrayBuffer,
+  fontBuffer: ArrayBuffer | Uint8Array,
   fontSize: number
 ): Promise<ShapedRun> {
   return shape(text, fontBuffer, fontSize);
 }
 
-/**
- * Get HarfBuzz version info
- */
+/** HarfBuzz version info */
 export async function getVersion(): Promise<string> {
-  await initHarfBuzz();
-  // HarfBuzzJS may not expose version, return package version
-  return 'harfbuzzjs-1.6.3';
+  return `harfbuzzjs-${hb.versionString()}`;
 }

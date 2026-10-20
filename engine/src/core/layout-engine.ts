@@ -17,6 +17,7 @@ import {
   getColumnXPosition 
 } from '../layout/two-column-layout';
 import { layoutSection, type SectionLayoutConfig } from '../layout/section-balancer.js';
+import { justifyLine } from '../justification/justify.js';
 
 // Re-export ShapedWord for convenience
 export type { ShapedWord };
@@ -46,6 +47,17 @@ export interface LayoutConfig {
   pagePolicy?: 'fill' | 'balanced';
   /** Balance tolerance in points (default: 0 = perfect balance) */
   balanceTolerance?: number;
+  /**
+   * Stretch word spacing so lines fill the column (off when omitted).
+   * Every line except the last line of the text is justified; layoutDocument
+   * works on a flat word list, so it cannot tell paragraph ends apart.
+   */
+  justify?: {
+    /** Smallest allowed gap in points (default 2) */
+    minWordSpace?: number;
+    /** Largest allowed gap in points (default 6) */
+    maxWordSpace?: number;
+  };
 }
 
 export interface LayoutResult {
@@ -76,12 +88,18 @@ export interface ColumnContent {
 }
 
 export interface LineContent {
-  /** Y position (baseline) */
+  /** Y position of the top of the line box (the renderer derives the baseline from the font) */
   y: number;
   /** Words in this line (visual order, RTL) */
   words: ShapedWord[];
   /** X position for start of line (right edge for RTL) */
   x: number;
+  /**
+   * Gap before each following word, in points (length = words.length - 1).
+   * Set when justification ran for this line; otherwise the renderer uses
+   * LayoutConfig.wordSpacing.
+   */
+  wordSpaces?: number[];
 }
 
 /**
@@ -183,11 +201,40 @@ export function layoutDocument(
     }
   }
 
+  if (fullConfig.justify) {
+    applyJustification(pages, columnWidth, fullConfig);
+  }
+
   return {
     pages,
     pageCount: pages.length,
     config: fullConfig,
   };
+}
+
+/** Compute per-line word gaps for all lines except the final line of the text. */
+function applyJustification(
+  pages: PageLayout[],
+  columnWidth: number,
+  config: LayoutConfig
+): void {
+  const lines: LineContent[] = [];
+  for (const page of pages) {
+    lines.push(...page.rightColumn.lines, ...page.leftColumn.lines);
+  }
+  lines.pop(); // last line of the text stays natural
+
+  const opts = config.justify ?? {};
+  for (const line of lines) {
+    if (line.words.length < 2) continue;
+    const result = justifyLine(line.words, {
+      targetWidth: columnWidth,
+      idealWordSpace: config.wordSpacing,
+      ...(opts.minWordSpace !== undefined && { minWordSpace: opts.minWordSpace }),
+      ...(opts.maxWordSpace !== undefined && { maxWordSpace: opts.maxWordSpace }),
+    });
+    line.wordSpaces = result.wordSpaces;
+  }
 }
 
 /**
