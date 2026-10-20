@@ -28,6 +28,8 @@ export interface OptimalBreakerOptions extends SpaceRange {
   linePenalty?: number;
   /** Penalty for breaking after a maqaf piece, with no space (default 50) */
   joinBreakPenalty?: number;
+  /** Extra penalty for a one-word final line of a paragraph (default 100). Set to 0 to disable. */
+  runtPenalty?: number;
 }
 
 export interface OptimalBreakResult extends LineBreakResult {
@@ -50,6 +52,7 @@ const OVERFULL_DEMERITS = 1e15;
 interface Params {
   linePenalty: number;
   joinBreakPenalty: number;
+  runtPenalty: number;
 }
 
 /**
@@ -68,7 +71,8 @@ function lineDemerits(
   isLast: boolean,
   breakPenalty: number,
   singleWord: boolean,
-  linePenalty: number
+  linePenalty: number,
+  runtPenalty: number
 ): { demerits: number; ratio: number; overfull: boolean } {
   const diff = maxWidth - width;
   let ratio = 0;
@@ -101,7 +105,9 @@ function lineDemerits(
     }
   }
 
-  const base = linePenalty + badness + breakPenalty;
+  // A one-word paragraph-ending line is undesirable, but not forbidden: a
+  // sufficiently constrained paragraph may have no better legal alternative.
+  const base = linePenalty + badness + breakPenalty + (isLast && singleWord ? runtPenalty : 0);
   return {
     demerits: base * base + (overfull ? OVERFULL_DEMERITS : 0),
     ratio,
@@ -117,6 +123,7 @@ export function breakLinesOptimal(
   const p: Params = {
     linePenalty: options.linePenalty ?? 10,
     joinBreakPenalty: options.joinBreakPenalty ?? 50,
+    runtPenalty: options.runtPenalty ?? 100,
   };
   const { maxWidth, natural, min, max } = options;
   const n = words.length;
@@ -164,7 +171,8 @@ export function breakLinesOptimal(
 
       const breakPenalty = !isLast && last.joinNext ? p.joinBreakPenalty : 0;
       const r = lineDemerits(
-        width, stretch, shrink, maxWidth, isLast, breakPenalty, singleWord, p.linePenalty
+        width, stretch, shrink, maxWidth, isLast, breakPenalty, singleWord, p.linePenalty,
+        p.runtPenalty
       );
 
       if (r.demerits !== Infinity) {
@@ -198,7 +206,8 @@ export function breakLinesOptimal(
       isLast,
       0,
       k - from === 1,
-      p.linePenalty
+      p.linePenalty,
+      p.runtPenalty
     );
     result.lines.push(line);
     result.lineWidths.push(width);
@@ -221,6 +230,7 @@ export function scoreBreaks(
 ): number {
   const linePenalty = options.linePenalty ?? 10;
   const joinBreakPenalty = options.joinBreakPenalty ?? 50;
+  const runtPenalty = options.runtPenalty ?? 100;
   const { maxWidth, natural, min, max } = options;
   let total = 0;
   lines.forEach((line, li) => {
@@ -239,7 +249,8 @@ export function scoreBreaks(
       isLast,
       breakPenalty,
       line.length === 1,
-      linePenalty
+      linePenalty,
+      runtPenalty
     ).demerits;
   });
   return total;

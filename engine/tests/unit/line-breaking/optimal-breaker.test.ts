@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+﻿import { describe, it, expect } from 'vitest';
 import { breakLines, type ShapedWord } from '../../../src/line-breaking/greedy-breaker';
 import {
   breakLinesOptimal,
@@ -93,6 +93,37 @@ describe('breakLinesOptimal', () => {
     const r = breakLinesOptimal(words, opts(170));
     expect(scoreBreaks(r.lines, opts(170))).toBeCloseTo(r.totalDemerits, 3);
   });
+
+  it('penalizes a one-word final line, and allows disabling the penalty', () => {
+    const lines = [[w(30), w(30)], [w(30)]];
+    const base = { ...opts(100), runtPenalty: 0 };
+    const penalized = { ...opts(100), runtPenalty: 500 };
+    expect(scoreBreaks(lines, penalized)).toBeGreaterThan(scoreBreaks(lines, base));
+    expect(scoreBreaks(lines, { ...opts(100), runtPenalty: 0 })).toBeCloseTo(
+      scoreBreaks(lines, base),
+      10,
+    );
+  });
+
+
+it('avoids a one-word final line when a better alternative exists', () => {
+  const words = [35, 15, 15, 15, 15, 45].map((x) => w(x));
+  const free = breakLinesOptimal(words, {
+    ...opts(80),
+    runtPenalty: 0,
+  });
+  const penalized = breakLinesOptimal(words, {
+    ...opts(80),
+    runtPenalty: 1000,
+  });
+
+  expect(free.lines.at(-1)).toHaveLength(1);
+  expect(penalized.lines.at(-1)!.length).toBeGreaterThan(1);
+  expect(penalized.totalDemerits).toBeCloseTo(
+    scoreBreaks(penalized.lines, { ...opts(80), runtPenalty: 1000 }),
+    3,
+  );
+});
 
   it('beats the greedy breaker on a case where greedy strands a word', () => {
     // width 100: greedy gives [20 40 | 50 | 60 20 ...]-style lines with a lone, unstretchable word;
