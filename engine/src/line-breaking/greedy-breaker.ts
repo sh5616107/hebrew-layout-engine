@@ -26,6 +26,14 @@ export interface ShapedWord {
   clusters?: number[];
   /** Font size in points the word was shaped at */
   fontSize?: number;
+  /**
+   * No space follows this word: the next word continues it (the piece before
+   * the rest of a maqaf-joined word, e.g. "עַל־" + "פְּנֵי"). A line may still
+   * break here, with no gap added.
+   */
+  joinNext?: boolean;
+  /** Last word of a paragraph: a line break is forced after it and that line is not stretched */
+  endsParagraph?: boolean;
 }
 
 export interface LineBreakResult {
@@ -80,7 +88,8 @@ export function breakLines(
     if (!word) continue;
     
     const isFirstWordInLine = currentLine.length === 0;
-    const spaceWidth = isFirstWordInLine ? 0 : wordSpacing;
+    const prev = currentLine[currentLine.length - 1];
+    const spaceWidth = isFirstWordInLine || prev?.joinNext ? 0 : wordSpacing;
     const widthWithWord = currentWidth + spaceWidth + word.width;
 
     // Special case: if this is first word in line and it exceeds maxWidth, try breaking it
@@ -138,6 +147,15 @@ export function breakLines(
         currentLine = [word];
         currentWidth = word.width;
       }
+    }
+
+    // A paragraph never shares a line with the next one
+    if (word.endsParagraph && currentLine.length > 0) {
+      lines.push(currentLine);
+      lineWidths.push(currentWidth);
+      cleanBreaks.push(true);
+      currentLine = [];
+      currentWidth = 0;
     }
   }
 

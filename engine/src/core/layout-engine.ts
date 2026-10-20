@@ -10,6 +10,7 @@ import type { TwoColumnLayout } from '../layout/two-column-layout';
 import type { LayoutSection } from './types.js';
 import type { SectionBalancingConfig, WordSpacingRangeConfig } from './config.js';
 import { breakLines } from '../line-breaking/greedy-breaker';
+import { breakLinesOptimal } from '../line-breaking/optimal-breaker.js';
 import { 
   layoutTwoColumns, 
   layoutTwoColumnsBalanced,
@@ -17,7 +18,7 @@ import {
   getColumnXPosition 
 } from '../layout/two-column-layout';
 import { layoutSection, type SectionLayoutConfig } from '../layout/section-balancer.js';
-import { justifyLine } from '../justification/justify.js';
+import { fitLine, type SpaceRange } from '../justification/fit-line.js';
 
 // Re-export ShapedWord for convenience
 export type { ShapedWord };
@@ -57,6 +58,29 @@ export interface LayoutConfig {
     minWordSpace?: number;
     /** Largest allowed gap in points (default 6) */
     maxWordSpace?: number;
+  };
+  /**
+   * Line breaking strategy (default: greedy).
+   * 'optimal' breaks whole paragraphs (Knuth–Plass style, see optimal-breaker.ts) and
+   * always justifies: every line except the last of a paragraph is filled flush by
+   * stretching/shrinking the word gaps within the range below. `justify` is ignored then.
+   */
+  lineBreaking?: {
+    mode: 'greedy' | 'optimal';
+    /** Smallest gap as a fraction of wordSpacing (default 0.85) */
+    minSpaceRatio?: number;
+    /** Largest "good" gap as a fraction of wordSpacing (default 1.4) */
+    maxSpaceRatio?: number;
+  };
+}
+
+/** Elastic range of the word gap implied by the config (used by optimal breaking). */
+export function wordSpaceRange(config: LayoutConfig): SpaceRange {
+  const natural = config.wordSpacing;
+  return {
+    natural,
+    min: natural * (config.lineBreaking?.minSpaceRatio ?? 0.85),
+    max: natural * (config.lineBreaking?.maxSpaceRatio ?? 1.4),
   };
 }
 
@@ -144,11 +168,14 @@ export function layoutDocument(
   );
 
   // Step 1: Break into lines
-  const lineBreakResult = breakLines(shapedWords, {
-    maxWidth: columnWidth,
-    wordSpacing: fullConfig.wordSpacing,
-    allowMidWordBreak: false, // M1.0: no mid-word breaking
-  });
+  const lineBreakResult =
+    fullConfig.lineBreaking?.mode === 'optimal'
+      ? breakLinesOptimal(shapedWords, { maxWidth: columnWidth, ...wordSpaceRange(fullConfig) })
+      : breakLines(shapedWords, {
+          maxWidth: columnWidth,
+          wordSpacing: fullConfig.wordSpacing,
+          allowMidWordBreak: false, // M1.0: no mid-word breaking
+        });
 
   const pages: PageLayout[] = [];
   let remainingLines = lineBreakResult.lines;
@@ -201,7 +228,7 @@ export function layoutDocument(
     }
   }
 
-  if (fullConfig.justify) {
+  if (fullConfig.justify || fullConfig.lineBreaking?.mode === 'optimal') {
     applyJustification(pages, columnWidth, fullConfig);
   }
 
@@ -212,28 +239,35 @@ export function layoutDocument(
   };
 }
 
-/** Compute per-line word gaps for all lines except the final line of the text. */
+/**
+ * Compute per-line word gaps. Not justified: the final line of the text and the last
+ * line of every paragraph (a line whose last word has `endsParagraph`).
+ */
 function applyJustification(
   pages: PageLayout[],
   columnWidth: number,
   config: LayoutConfig
 ): void {
+  const optimal = config.lineBreaking?.mode === 'optimal';
+  const range: SpaceRange = optimal
+    ? wordSpaceRange(config)
+    : {
+        natural: config.wordSpacing,
+        min: config.justify?.minWordSpace ?? 2,
+        max: config.justify?.maxWordSpace ?? 6,
+      };
+
   const lines: LineContent[] = [];
   for (const page of pages) {
     lines.push(...page.rightColumn.lines, ...page.leftColumn.lines);
   }
-  lines.pop(); // last line of the text stays natural
+  const finalLine = lines[lines.length - 1];
 
-  const opts = config.justify ?? {};
   for (const line of lines) {
-    if (line.words.length < 2) continue;
-    const result = justifyLine(line.words, {
-      targetWidth: columnWidth,
-      idealWordSpace: config.wordSpacing,
-      ...(opts.minWordSpace !== undefined && { minWordSpace: opts.minWordSpace }),
-      ...(opts.maxWordSpace !== undefined && { maxWordSpace: opts.maxWordSpace }),
-    });
-    line.wordSpaces = result.wordSpaces;
+    if (line === finalLine || line.words.length < 2) continue;
+    if (line.words[line.words.length - 1]?.endsParagraph) continue;
+    // optimal: fill the line flush; otherwise never stretch past the maximum
+    line.wordSpaces = fitLine(line.words, columnWidth, range, !optimal).gaps;
   }
 }
 

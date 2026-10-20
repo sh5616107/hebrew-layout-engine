@@ -141,7 +141,7 @@ function renderLine(ctx: RenderContext, line: LineContent): void {
     currentX -= word.width;
 
     if (i < line.words.length - 1) {
-      currentX -= line.wordSpaces?.[i] ?? layout.config.wordSpacing;
+      currentX -= line.wordSpaces?.[i] ?? (word.joinNext ? 0 : layout.config.wordSpacing);
     }
   }
 }
