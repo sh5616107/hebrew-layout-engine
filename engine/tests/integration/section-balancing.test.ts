@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
+import * as fs from 'fs';
+import * as path from 'path';
 import { layoutSection, type SectionLayoutConfig } from '../../src/layout/section-balancer';
+import { layoutDocumentWithSections } from '../../src/core/layout-engine';
 import type { LayoutSection, LayoutParagraph, ShapedRun } from '../../src/core/types';
+import { shape } from '../../src/typography/shaper';
+import { renderToPDF } from '../../src/rendering/pdf-renderer';
 
 // Helper to create mock shaped run
 function mockRun(text: string): ShapedRun {
@@ -57,6 +62,72 @@ const defaultConfig: SectionLayoutConfig = {
 };
 
 describe('Section Balancing Integration', () => {
+  it('preserves shaped runs in the public document layout result', () => {
+    const originalRun = mockRun('שלום');
+    const section: LayoutSection = {
+      id: 'section-preserve-runs',
+      kind: 'body',
+      paragraphs: [{
+        id: 'paragraph-preserve-runs',
+        lines: [[originalRun], [mockRun('עולם')]],
+        style: { lastLine: 'start', widows: 2, orphans: 2 },
+      }],
+      balancePolicy: 'fill',
+    };
+
+    const result = layoutDocumentWithSections([section], {
+      pageHeight: 200,
+      topMargin: 10,
+      bottomMargin: 10,
+      lineHeight: 14,
+    });
+    const outputLines = [
+      ...result.pages.flatMap((page) => page.rightColumn.lines),
+      ...result.pages.flatMap((page) => page.leftColumn.lines),
+    ];
+
+    expect(outputLines).toHaveLength(2);
+    expect(outputLines.flatMap((line) => line.runs ?? [])).toContain(originalRun);
+  });
+
+  it('renders shaped section runs as PDF glyphs on the baseline grid', async () => {
+    const fontPath = 'fonts/SILEOT.ttf';
+    const font = fs.readFileSync(fontPath);
+    const firstRun = await shape('שלום', font, 12);
+    const secondRun = await shape('עולם', font, 12);
+    const section: LayoutSection = {
+      id: 'section-render-runs',
+      kind: 'body',
+      paragraphs: [{
+        id: 'paragraph-render-runs',
+        // Four lines force a 2+2 section split. This lets the assertion check
+        // both that glyphs reach the PDF and that successive baselines retain
+        // the public API's point-based line height.
+        lines: [[firstRun], [firstRun], [secondRun], [secondRun]],
+        style: { lastLine: 'start', widows: 2, orphans: 2 },
+      }],
+      balancePolicy: 'fill',
+    };
+    const layout = layoutDocumentWithSections([section], {
+      pageHeight: 200,
+      topMargin: 10,
+      bottomMargin: 10,
+      lineHeight: 14,
+    });
+    const outputPath = path.join('out', 'section-shaped-runs.pdf');
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+
+    await renderToPDF(layout, { fontPath, fontSize: 12, outputPath, compress: false });
+
+    const content = fs.readFileSync(outputPath, 'latin1');
+    const positions = Array.from(
+      content.matchAll(/1 0 0 1 (-?[\d.]+) (-?[\d.]+) Tm\s*<[0-9a-f]{4}> Tj/g),
+      (match) => ({ x: Number(match[1]), y: Number(match[2]) }),
+    );
+    expect(positions).toHaveLength(2 * (firstRun.glyphs.length + secondRun.glyphs.length));
+    expect(positions[firstRun.glyphs.length]!.y - positions[0]!.y).toBeCloseTo(-14, 3);
+  });
+
   describe('Single page section', () => {
     it('should layout section with single paragraph', () => {
       const section: LayoutSection = {

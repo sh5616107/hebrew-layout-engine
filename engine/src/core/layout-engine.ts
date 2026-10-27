@@ -7,7 +7,7 @@
 
 import type { ShapedWord } from '../line-breaking/greedy-breaker';
 import type { TwoColumnLayout } from '../layout/two-column-layout';
-import type { LayoutSection } from './types.js';
+import type { LayoutSection, ShapedRun } from './types.js';
 import type { SectionBalancingConfig, WordSpacingRangeConfig } from './config.js';
 import { breakLines } from '../line-breaking/greedy-breaker';
 import { breakLinesOptimal } from '../line-breaking/optimal-breaker.js';
@@ -19,6 +19,7 @@ import {
 } from '../layout/two-column-layout';
 import { layoutSection, type SectionLayoutConfig } from '../layout/section-balancer.js';
 import { fitLine, type SpaceRange } from '../justification/fit-line.js';
+import { ptToMpt } from './units.js';
 
 // Re-export ShapedWord for convenience
 export type { ShapedWord };
@@ -116,6 +117,8 @@ export interface LineContent {
   y: number;
   /** Words in this line (visual order, RTL) */
   words: ShapedWord[];
+  /** Pre-shaped runs used by section-level layout (coordinates in milli-points). */
+  runs?: ShapedRun[];
   /** X position for start of line (right edge for RTL) */
   x: number;
   /**
@@ -358,7 +361,10 @@ export function layoutDocumentWithSections(
 
   const sectionLayoutConfig: SectionLayoutConfig = {
     maxLinesPerColumn,
-    lineHeight: fullConfig.lineHeight,
+    // The public layout API uses points, while the section balancer and
+    // ShapedRun model use milli-points. Keep the conversion at this boundary
+    // so balancing tolerances and rendered geometry describe the same length.
+    lineHeight: ptToMpt(fullConfig.lineHeight),
     sectionBalancing: config.sectionBalancing ?? {
       maxAttempts: 100, // proposal-for-approval
       lookAheadPages: 5,
@@ -366,7 +372,7 @@ export function layoutDocumentWithSections(
       minParagraphLinesToSplit: 4, // proposal-for-approval
       widows: 2,
       orphans: 2,
-      balanceTolerance: fullConfig.balanceTolerance ?? 0,
+      balanceTolerance: ptToMpt(fullConfig.balanceTolerance ?? 0),
       defaultParagraphSpacing: 1.0,
       maxParagraphSpacingMultiplier: 2.0, // proposal-for-approval
       enableStageA: true,
@@ -409,28 +415,29 @@ export function layoutDocumentWithSections(
         fullConfig.columnGap
       );
 
-      // Use real data from section page (not mock)
-      const rightWords: ShapedWord[][] = sectionPage.rightColumn.lines.map(() => []);
-      const leftWords: ShapedWord[][] = sectionPage.leftColumn.lines.map(() => []);
-
+      // Preserve the shaped glyph runs produced by the section layout. These are
+      // not ShapedWord objects: converting them to empty word arrays silently
+      // discarded the entire page's text.
       const rightColumn: ColumnContent = {
         x: rightX,
         width: columnWidth,
-        lines: rightWords.map((words, i) => ({
-          y: fullConfig.topMargin + i * fullConfig.lineHeight,
-          words,
-          x: rightX + columnWidth,
-        })),
+        lines: sectionColumnLines(
+          sectionPage.rightColumn.segments,
+          rightX + columnWidth,
+          fullConfig.topMargin,
+          fullConfig.lineHeight,
+        ),
       };
 
       const leftColumn: ColumnContent = {
         x: leftX,
         width: columnWidth,
-        lines: leftWords.map((words, i) => ({
-          y: fullConfig.topMargin + i * fullConfig.lineHeight,
-          words,
-          x: leftX + columnWidth,
-        })),
+        lines: sectionColumnLines(
+          sectionPage.leftColumn.segments,
+          leftX + columnWidth,
+          fullConfig.topMargin,
+          fullConfig.lineHeight,
+        ),
       };
 
       pages.push({
@@ -447,4 +454,31 @@ export function layoutDocumentWithSections(
     config: fullConfig,
     sectionDiagnostics: allSectionDiagnostics,
   };
+}
+
+/**
+ * Convert a balanced section column to the public rendering model.
+ *
+ * `spacingAfter` is measured in baseline-grid lines by the section balancer.
+ * Preserve it here; otherwise Stage C can report a balanced page while the
+ * PDF still draws the shorter column without the added paragraph spacing.
+ */
+function sectionColumnLines(
+  segments: Array<{ lines: ShapedRun[][]; spacingAfter?: number }>,
+  rightEdge: number,
+  topMargin: number,
+  lineHeight: number,
+): LineContent[] {
+  const lines: LineContent[] = [];
+  let y = topMargin;
+
+  for (const segment of segments) {
+    for (const runs of segment.lines) {
+      lines.push({ y, words: [], runs, x: rightEdge });
+      y += lineHeight;
+    }
+    y += (segment.spacingAfter ?? 0) * lineHeight;
+  }
+
+  return lines;
 }

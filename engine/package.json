@@ -12,6 +12,7 @@
     }
   },
   "scripts": {
+    "debug:shaping": "tsx tools/debug-shaping.ts",
     "build": "tsup",
     "dev": "tsup --watch",
     "test": "npm run typecheck && npm run lint && vitest",

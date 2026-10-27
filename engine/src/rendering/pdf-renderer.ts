@@ -14,6 +14,8 @@ import PDFDocument from 'pdfkit';
 import * as fs from 'fs';
 import type { LayoutResult, LineContent } from '../core/layout-engine';
 import type { ShapedWord } from '../line-breaking/greedy-breaker';
+import type { ShapedRun } from '../core/types.js';
+import { mptToPt } from '../core/units.js';
 import {
   currentFontMetrics,
   drawGlyphs,
@@ -132,6 +134,11 @@ function renderLine(ctx: RenderContext, line: LineContent): void {
   const { ascent, descent } = currentFontMetrics(doc);
   const baseline = baselineForLine(line.y, layout.config.lineHeight, fontSize, ascent, descent);
 
+  if (line.runs) {
+    renderShapedRuns(ctx, line.runs, line.x, baseline);
+    return;
+  }
+
   let currentX = line.x; // right edge of the next word
   for (let i = 0; i < line.words.length; i++) {
     const word = line.words[i];
@@ -143,6 +150,41 @@ function renderLine(ctx: RenderContext, line: LineContent): void {
     if (i < line.words.length - 1) {
       currentX -= line.wordSpaces?.[i] ?? (word.joinNext ? 0 : layout.config.wordSpacing);
     }
+  }
+}
+
+
+/** Render section-layout runs without converting them to the incompatible ShapedWord model.
+ * ShapedRun coordinates and advances are milli-points; PDFKit uses points.
+ */
+function renderShapedRuns(
+  ctx: RenderContext,
+  runs: ShapedRun[],
+  rightEdge: number,
+  baseline: number
+): void {
+  let currentRight = rightEdge;
+
+  // Each RTL run's glyph array is in visual drawing order. Runs are laid out
+  // from the right edge toward the left, matching the section layout's RTL model.
+  for (const run of runs) {
+    const runWidth = mptToPt(run.width);
+    const left = currentRight - runWidth;
+    let pen = left;
+    const placements = run.glyphs.map((glyph, index) => {
+      const advance = mptToPt(glyph.advance);
+      const placement = {
+        glyphId: glyph.glyphId,
+        x: pen + mptToPt(glyph.x),
+        y: baseline - mptToPt(glyph.y),
+        advance,
+        index,
+      };
+      pen += advance;
+      return placement;
+    });
+    drawGlyphs(ctx.doc, placements, mptToPt(run.size));
+    currentRight = left;
   }
 }
 
