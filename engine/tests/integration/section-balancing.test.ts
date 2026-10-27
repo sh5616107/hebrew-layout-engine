@@ -128,6 +128,27 @@ describe('Section Balancing Integration', () => {
     expect(positions[firstRun.glyphs.length]!.y - positions[0]!.y).toBeCloseTo(-14, 3);
   });
 
+  it('does not create a one-line widow when the final page starts within a paragraph', () => {
+    const section: LayoutSection = {
+      id: 'section-widow-guard',
+      kind: 'body',
+      // The first page holds 40 lines. The final two lines must remain
+      // together: moving one into the left column would create a one-line
+      // continuation of this paragraph.
+      paragraphs: [mockParagraph('paragraph-widow-guard', 42)],
+      balancePolicy: 'fill',
+    };
+
+    const result = layoutSection(section, defaultConfig);
+    const finalPage = result.pages[1];
+
+    expect(finalPage?.rightColumn.segments[0]?.firstLine).toBe(40);
+    expect(finalPage?.rightColumn.lines).toHaveLength(2);
+    expect(finalPage?.leftColumn.lines).toHaveLength(0);
+    expect(finalPage?.isBalanced).toBe(false);
+    expect(result.diagnostics.some((diagnostic) => diagnostic.code === 'SECTION_BALANCE_FAILED')).toBe(true);
+  });
+
   describe('Single page section', () => {
     it('should layout section with single paragraph', () => {
       const section: LayoutSection = {

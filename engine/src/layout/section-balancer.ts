@@ -15,7 +15,6 @@ import type {
   WordSpacingRangeConfig,
 } from '../core/config.js';
 import {
-  generateAlternativeBreaks,
   selectBestAlternative,
 } from '../justification/spacing-adjuster.js';
 
@@ -183,8 +182,10 @@ function initialFill(
     pages.push(createPageFromLines(
       pages.length,
       pageLines,
+      section.paragraphs,
+      config,
+      i,
       pageParagraphs,
-      config
     ));
   }
 
@@ -197,18 +198,24 @@ function initialFill(
 function createPageFromLines(
   pageIndex: number,
   lines: ShapedRun[][],
-  paragraphs: LayoutParagraph[],
-  config: SectionLayoutConfig
+  allParagraphs: LayoutParagraph[],
+  config: SectionLayoutConfig,
+  globalLineOffset: number,
+  pageParagraphs: LayoutParagraph[],
 ): SectionPage {
   const maxLinesPerColumn = config.maxLinesPerColumn;
   const rightLines = lines.slice(0, maxLinesPerColumn);
   const leftLines = lines.slice(maxLinesPerColumn);
 
   // Build segments for right column
-  const rightSegments = buildSegments(rightLines, paragraphs, 0);
+  const rightSegments = buildSegments(rightLines, allParagraphs, globalLineOffset);
   
   // Build segments for left column
-  const leftSegments = buildSegments(leftLines, paragraphs, rightLines.length);
+  const leftSegments = buildSegments(
+    leftLines,
+    allParagraphs,
+    globalLineOffset + rightLines.length,
+  );
 
   const rightHeight = rightLines.length;
   const leftHeight = leftLines.length;
@@ -229,7 +236,7 @@ function createPageFromLines(
     leftHeight,
     isBalanced,
     bottomDelta,
-    paragraphs,
+    paragraphs: pageParagraphs,
   };
 }
 
@@ -302,6 +309,70 @@ function buildSegments(
   }
 
   return segments;
+}
+
+/** A line paired with its original paragraph location. */
+interface TrackedLine {
+  runs: ShapedRun[];
+  paragraphId: string;
+  lineIndex: number;
+}
+
+/**
+ * Recover paragraph locations from the current page before changing its column
+ * split. Keeping this information is what lets Stage A enforce widow/orphan
+ * constraints even when a page starts or ends in the middle of a paragraph.
+ */
+function trackedLinesForPage(page: SectionPage): TrackedLine[] {
+  return [...page.rightColumn.segments, ...page.leftColumn.segments].flatMap((segment) =>
+    segment.lines.map((runs, offset) => ({
+      runs,
+      paragraphId: segment.paragraphId,
+      lineIndex: segment.firstLine + offset,
+    })),
+  );
+}
+
+function segmentsFromTrackedLines(lines: TrackedLine[]): ParagraphSegment[] {
+  const segments: ParagraphSegment[] = [];
+  for (const line of lines) {
+    const previous = segments[segments.length - 1];
+    if (
+      previous &&
+      previous.paragraphId === line.paragraphId &&
+      previous.lastLine + 1 === line.lineIndex
+    ) {
+      previous.lastLine = line.lineIndex;
+      previous.lines.push(line.runs);
+      continue;
+    }
+    segments.push({
+      paragraphId: line.paragraphId,
+      firstLine: line.lineIndex,
+      lastLine: line.lineIndex,
+      lines: [line.runs],
+    });
+  }
+  return segments;
+}
+
+/** True when a proposed column boundary does not create a widow or orphan. */
+function canSplitPageAt(
+  lines: TrackedLine[],
+  splitPoint: number,
+  paragraphs: LayoutParagraph[],
+  config: SectionLayoutConfig,
+): boolean {
+  const before = lines[splitPoint - 1];
+  const after = lines[splitPoint];
+  if (!before || !after || before.paragraphId !== after.paragraphId) return true;
+
+  const paragraph = paragraphs.find((candidate) => candidate.id === after.paragraphId);
+  if (!paragraph) return false;
+
+  const orphans = Math.max(config.sectionBalancing.orphans, paragraph.style.orphans);
+  const widows = Math.max(config.sectionBalancing.widows, paragraph.style.widows);
+  return after.lineIndex >= orphans && paragraph.lines.length - after.lineIndex >= widows;
 }
 
 /**
@@ -421,15 +492,19 @@ function stageA_DifferentSplit(
   const page = pages[pageIndex];
   if (!page) return { pages, balanced: false };
 
-  const totalLines = page.rightColumn.lines.length + page.leftColumn.lines.length;
+  const trackedLines = trackedLinesForPage(page);
+  const totalLines = trackedLines.length;
   const maxLinesPerColumn = config.maxLinesPerColumn;
 
   // Determine search range
   const searchRange = isLastPage ? totalLines : Math.min(5, Math.floor(totalLines / 3)); // proposal-for-approval
 
   const middle = Math.ceil(totalLines / 2);
-  let bestSplit = middle;
-  let bestDelta = Infinity;
+  let bestSplit: number | undefined;
+  // Keep the current order unless a candidate genuinely improves its balance.
+  // This avoids moving all content to the left column when every legal split
+  // has the same delta as the initial fill.
+  let bestDelta = page.bottomDelta;
 
   for (let offset = -searchRange; offset <= searchRange; offset++) {
     const splitPoint = middle + offset;
@@ -441,6 +516,7 @@ function stageA_DifferentSplit(
     const rightHeight = splitPoint;
     const leftHeight = totalLines - splitPoint;
     if (leftHeight > maxLinesPerColumn) continue;
+    if (!canSplitPageAt(trackedLines, splitPoint, page.paragraphs, config)) continue;
 
     const delta = Math.abs(rightHeight - leftHeight) * config.lineHeight;
 
@@ -455,14 +531,19 @@ function stageA_DifferentSplit(
     }
   }
 
-  // Apply best split
-  const allLines = [...page.rightColumn.lines, ...page.leftColumn.lines];
-  const newRightLines = allLines.slice(0, bestSplit);
-  const newLeftLines = allLines.slice(bestSplit);
+  // All geometrically balanced candidates could violate paragraph constraints.
+  if (bestSplit === undefined) return { pages, balanced: false };
 
-  // Rebuild segments for new split
-  const newRightSegments = buildSegments(newRightLines, page.paragraphs, 0);
-  const newLeftSegments = buildSegments(newLeftLines, page.paragraphs, newRightLines.length);
+  // Apply best split
+  const newRightTrackedLines = trackedLines.slice(0, bestSplit);
+  const newLeftTrackedLines = trackedLines.slice(bestSplit);
+  const newRightLines = newRightTrackedLines.map((line) => line.runs);
+  const newLeftLines = newLeftTrackedLines.map((line) => line.runs);
+
+  // Preserve the original line indexes; the page may itself start halfway
+  // through a paragraph.
+  const newRightSegments = segmentsFromTrackedLines(newRightTrackedLines);
+  const newLeftSegments = segmentsFromTrackedLines(newLeftTrackedLines);
 
   const newPage: SectionPage = {
     ...page,
@@ -509,26 +590,17 @@ function stageB_AlternativeBreaks(
 
   // Try alternatives for each paragraph on page
   for (const paragraph of page.paragraphs) {
-    // Use provided alternatives if available, otherwise generate
+    // Only use alternatives produced by a real line-breaking pass. The former
+    // placeholder generator changed a paragraph's line count by truncating its
+    // existing lines, which could silently delete manuscript content.
     let alternatives: LineBreakAlternative[];
-    let generatedDiagnostics: SectionDiagnostic[] = [];
 
     if (paragraph.alternativeBreaks && paragraph.alternativeBreaks.length > 0) {
       // Use pre-generated alternatives
       alternatives = paragraph.alternativeBreaks;
     } else {
-      // Generate alternatives on the fly
-      const result = generateAlternativeBreaks(paragraph, {
-        spacingConfig: config.wordSpacing,
-        targetLineDelta,
-        sectionId: section.id,
-        paragraphId: paragraph.id,
-      });
-      alternatives = result.alternatives;
-      generatedDiagnostics = result.diagnostics;
+      alternatives = [];
     }
-
-    diagnostics.push(...generatedDiagnostics);
 
     const best = selectBestAlternative(alternatives, paragraph.lines.length, targetLineDelta);
     if (best && best.lines.length !== paragraph.lines.length) {

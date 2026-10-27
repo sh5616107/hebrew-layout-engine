@@ -36,6 +36,8 @@ export {
 } from './core/config.js';
 
 export { layoutDocumentWithSections } from './core/layout-engine.js';
+export { layoutText, type TextLayoutOptions } from './core/text-layout.js';
+export { renderToPDF, type PDFRenderOptions } from './rendering/pdf-renderer.js';
 
 /**
  * Main layout function
