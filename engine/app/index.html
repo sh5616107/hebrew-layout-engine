@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>עימוד עברי — תצוגה מקדימה</title>
+    <link rel="stylesheet" href="/app.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">HEBREW LAYOUT ENGINE</p>
+        <h1>תצוגה מקדימה לעימוד ספר</h1>
+        <p>הזינו טקסט, כוונו את הדף, והפיקו PDF לעיון.</p>
+      </header>
+      <section class="workspace">
+        <form id="layout-form">
+          <label class="text-label" for="text">הטקסט לעימוד</label>
+          <textarea id="text" name="text" spellcheck="false">בראשית ברא אלהים את השמים ואת הארץ.
+
+והארץ היתה תהו ובהו, וחשך על פני תהום; ורוח אלהים מרחפת על פני המים.</textarea>
+          <div class="settings">
+            <label>גופן<select name="font"><option value="ezra">Ezra SIL</option><option value="ezraSr">Ezra SIL SR</option></select></label>
+            <label>גודל גופן<input name="fontSize" type="number" value="12" min="8" max="36" step="0.5" /></label>
+            <label>רוחב דף<input name="pageWidth" type="number" value="498.9" min="200" max="1000" step="0.1" /></label>
+            <label>גובה דף<input name="pageHeight" type="number" value="708.66" min="200" max="1400" step="0.1" /></label>
+            <label>שוליים<input name="margin" type="number" value="48" min="0" max="160" step="1" /></label>
+            <label>רווח עמודות<input name="columnGap" type="number" value="18" min="0" max="100" step="1" /></label>
+            <label>גובה שורה<input name="lineHeight" type="number" value="16" min="8" max="60" step="0.5" /></label>
+          </div>
+          <div class="actions"><button type="submit">הפקת תצוגה מקדימה</button><span id="status" aria-live="polite"></span></div>
+        </form>
+        <section class="preview" aria-label="תצוגת PDF">
+          <div class="preview-heading"><h2>PDF</h2><a id="download" hidden download="layout-preview.pdf" href="/preview.pdf">הורדת הקובץ</a></div>
+          <iframe id="pdf" title="תצוגת העימוד"></iframe>
+        </section>
+      </section>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+:root { color-scheme: light; font-family: Arial, sans-serif; background: #f3efe7; color: #29241e; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+main { max-width: 1440px; margin: auto; padding: 48px 32px; }
+header { margin-bottom: 28px; }
+.eyebrow { color: #8a5828; font: 700 12px/1.2 Arial, sans-serif; letter-spacing: .12em; direction: ltr; }
+h1 { font-size: clamp(30px, 4vw, 48px); margin: 9px 0; }
+header p:not(.eyebrow) { color: #6c6257; margin: 0; }
+.workspace { display: grid; grid-template-columns: minmax(340px, .9fr) minmax(440px, 1.1fr); gap: 24px; }
+form, .preview { background: #fffdf9; border: 1px solid #ded6c9; border-radius: 16px; box-shadow: 0 12px 30px #4d3c2810; padding: 22px; }
+label { display: grid; gap: 7px; color: #5b5146; font-size: 14px; }
+.text-label { font-size: 16px; font-weight: 700; }
+textarea { resize: vertical; min-height: 260px; width: 100%; border: 1px solid #cfc4b4; border-radius: 9px; padding: 14px; color: #231e18; font: 18px/1.8 Georgia, serif; direction: rtl; }
+.settings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; margin-top: 18px; }
+input, select { border: 1px solid #cfc4b4; border-radius: 7px; background: #fff; padding: 9px; font: inherit; }
+.actions { display: flex; align-items: center; gap: 14px; margin-top: 20px; }
+button { background: #6f421e; color: #fff; border: 0; border-radius: 8px; padding: 11px 18px; font: 700 15px Arial, sans-serif; cursor: pointer; }
+button:disabled { opacity: .6; cursor: wait; }
+#status { color: #6c6257; font-size: 14px; }
+.preview { min-height: 690px; display: flex; flex-direction: column; }
+.preview-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+h2 { margin: 0; font-size: 18px; }
+a { color: #6f421e; font-weight: 700; }
+iframe { flex: 1; min-height: 600px; width: 100%; border: 1px solid #ded6c9; border-radius: 9px; background: #eee; }
+@media (max-width: 900px) { main { padding: 28px 16px; } .workspace { grid-template-columns: 1fr; } .preview { min-height: 580px; } }

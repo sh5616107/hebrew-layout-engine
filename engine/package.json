@@ -13,6 +13,7 @@
   },
   "scripts": {
     "debug:shaping": "tsx tools/debug-shaping.ts",
+    "preview": "tsx tools/preview-server.ts",
     "build": "tsup",
     "dev": "tsup --watch",
     "test": "npm run typecheck && npm run lint && vitest",
